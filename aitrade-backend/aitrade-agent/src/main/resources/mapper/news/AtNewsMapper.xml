@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.news.mapper.AtNewsMapper">
+    <resultMap type="AtNews" id="AtNewsResult">
+        <id property="id" column="id" />
+        <result property="guid" column="guid" />
+        <result property="title" column="title" />
+        <result property="link" column="link" />
+        <result property="content" column="content" />
+        <result property="pubTime" column="pub_time" />
+        <result property="source" column="source" />
+        <result property="author" column="author" />
+        <result property="isRag" column="is_rag" />
+        <result property="ragId" column="rag_id" />
+        <result property="status" column="status" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectAtNewsVo">
+        select id, guid, title, link, content, pub_time, source, author, is_rag, rag_id, status, create_time, update_time
+        from at_news
+    </sql>
+
+    <select id="selectAtNews" parameterType="AtNews" resultMap="AtNewsResult">
+        <include refid="selectAtNewsVo"/>
+        <where>
+            <if test="guid != null and guid != ''"> and guid = #{guid}</if>
+            <if test="title != null and title != ''"> and title like concat('%',#{title},'%')</if>
+            <if test="beginPubTime != null and endPubTime != null"> and pub_time between #{beginPubTime} and #{endPubTime}</if>
+            <if test="source != null and source != ''"> and source = #{source}</if>
+            <if test="author != null and author != null"> and author like concat('%',#{author},'%')</if>
+            <if test="isRag != null"> and is_rag = #{isRag}</if>
+            <if test="status != null"> and status = #{status}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectAtNewsById" parameterType="Long" resultMap="AtNewsResult">
+        <include refid="selectAtNewsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertAtNews" parameterType="AtNews" useGeneratedKeys="true" keyProperty="id">
+        insert into at_news(
+            <if test="guid != null and guid != ''">guid,</if>
+            <if test="title != null and title != ''">title,</if>
+            <if test="link != null and link != ''">link,</if>
+            <if test="content != null and content != ''">content,</if>
+            <if test="pubTime != null">pub_time,</if>
+            <if test="source != null and source != ''">source,</if>
+            <if test="author != null and author != ''">author,</if>
+            <if test="isRag != null">is_rag,</if>
+            <if test="ragId != null and ragId != ''">rag_id,</if>
+            <if test="status != null">status,</if>
+            create_time
+        ) values (
+            <if test="guid != null and guid != ''">#{guid},</if>
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="link != null and link != ''">#{link},</if>
+            <if test="content != null and content != ''">#{content},</if>
+            <if test="pubTime != null">#{pubTime},</if>
+            <if test="source != null and source != ''">#{source},</if>
+            <if test="author != null and author != ''">#{author},</if>
+            <if test="isRag != null">#{isRag},</if>
+            <if test="ragId != null and ragId != ''">#{ragId},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateAtNewsById" parameterType="AtNews">
+        update at_news
+        <set>
+            <if test="guid != null and guid != ''">guid = #{guid},</if>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="link != null and link != ''">link = #{link},</if>
+            <if test="content != null and content != ''">content = #{content},</if>
+            <if test="pubTime != null">pub_time = #{pubTime},</if>
+            <if test="source != null and source != ''">source = #{source},</if>
+            <if test="author != null and author != ''">author = #{author},</if>
+            <if test="isRag != null">is_rag = #{isRag},</if>
+            <if test="ragId != null and ragId != ''">rag_id = #{ragId},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAtNewsById" parameterType="Long">
+        delete from at_news where id = #{id}
+    </delete>
+    <delete id="deleteAtNewsByIds">
+        delete from at_news where id in
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+
+</mapper>

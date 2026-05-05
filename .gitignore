@@ -1,0 +1,91 @@
+
+# aitrade-backend ignore
+######################################################################
+# Build Tools
+
+aitrade-backend/.gradle
+aitrade-backend/build/
+aitrade-backend/!gradle/wrapper/gradle-wrapper.jar
+
+aitrade-backend/target/
+aitrade-backend/!.mvn/wrapper/maven-wrapper.jar
+
+######################################################################
+# IDE
+
+### STS ###
+aitrade-backend/.apt_generated
+aitrade-backend/.classpath
+aitrade-backend/.factorypath
+aitrade-backend/.project
+aitrade-backend/.settings
+aitrade-backend/.springBeans
+
+### IntelliJ IDEA ###
+aitrade-backend/.idea
+aitrade-backend/*.iws
+aitrade-backend/*.iml
+aitrade-backend/*.ipr
+
+### JRebel ###
+aitrade-backend/rebel.xml
+
+### NetBeans ###
+aitrade-backend/nbproject/private/
+aitrade-backend/build/*
+aitrade-backend/nbbuild/
+aitrade-backend/dist/
+aitrade-backend/nbdist/
+aitrade-backend/.nb-gradle/
+
+######################################################################
+# Others
+aitrade-backend/*.log
+aitrade-backend/*.xml.versionsBackup
+aitrade-backend/*.swp
+
+aitrade-backend/!*/build/*.java
+aitrade-backend/!*/build/*.html
+aitrade-backend/!*/build/*.xml
+
+# aitrade-frontend
+aitrade-frontend/.DS_Store
+aitrade-frontend/node_modules/
+aitrade-frontend/dist/
+aitrade-frontend/npm-debug.log*
+aitrade-frontend/yarn-debug.log*
+aitrade-frontend/yarn-error.log*
+aitrade-frontend/**/*.log
+
+aitrade-frontend/tests/**/coverage/
+aitrade-frontend/tests/e2e/reports
+aitrade-frontend/selenium-debug.log
+
+# Editor directories and files
+aitrade-frontend/.idea
+aitrade-frontend/.vscode
+aitrade-frontend/*.suo
+aitrade-frontend/*.ntvs*
+aitrade-frontend/*.njsproj
+aitrade-frontend/*.sln
+aitrade-frontend/*.local
+
+aitrade-frontend/package-lock.json
+aitrade-frontend/yarn.lock
+
+#RuoYi-App
+######################################################################
+# Build Tools
+
+RuoYi-App/unpackage/*
+RuoYi-App/node_modules/*
+
+######################################################################
+# Development Tools
+
+RuoYi-App/.idea/*
+RuoYi-App/.vscode/*
+RuoYi-App/.hbuilderx/*
+
+RuoYi-App/package-lock.json
+RuoYi-App/yarn.lock
