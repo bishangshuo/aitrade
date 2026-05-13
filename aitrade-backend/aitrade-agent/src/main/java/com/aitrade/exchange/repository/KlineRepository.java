@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -114,12 +115,19 @@ public class KlineRepository {
     public Long getLastOpenTime(String symbol) {
         String sql = "SELECT MAX(open_time) FROM kline_1m WHERE symbol = ?";
         try {
-            return jdbcTemplate.queryForObject(sql, Long.class, symbol);
+            // 使用 Timestamp 类型接收数据库返回的时间戳
+            Timestamp timestamp = jdbcTemplate.queryForObject(sql, Timestamp.class, symbol);
+            // 如果查询结果不为空，转换为毫秒时间戳
+            return timestamp != null ? timestamp.getTime() : null;
+        } catch (EmptyResultDataAccessException e) {
+            // 没有数据时返回 null（不打印错误日志）
+            return null;
         } catch (Exception e) {
             log.error("查询最后时间戳失败: symbol={}", symbol, e);
             return null;
         }
     }
+
 
     /**
      * 获取最新的N条K线数据

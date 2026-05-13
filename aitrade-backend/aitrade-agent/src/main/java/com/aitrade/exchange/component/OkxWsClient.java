@@ -50,8 +50,10 @@ public class OkxWsClient {
     public void start() {
         // 启动时先恢复数据
         compensationTask.fullRecoveryOnStartup();
+        //重新计算MACD指标
+        compensationTask.recalculateIndicatorsFromDB();
         // 建立WebSocket连接
-        connect();
+        //connect();
     }
 
     private void connect() {
@@ -154,7 +156,7 @@ public class OkxWsClient {
                     final long startTime = lastTimestamp + ONE_MINUTE_MS;
                     final long endTime = currentTimestamp - ONE_MINUTE_MS;
                     CompletableFuture.runAsync(() ->
-                            compensationTask.compensateRange(startTime, endTime));
+                            compensationTask.compensateRange(startTime));
                 }
             }
             lastTimestamp = currentTimestamp;
