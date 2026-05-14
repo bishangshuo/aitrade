@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.exchange.mapper.AtInstMapper">
+    
+    <resultMap type="AtInst" id="AtInstResult">
+        <result property="id"    column="id"    />
+        <result property="instId"    column="inst_id"    />
+        <result property="watch"    column="watch"    />
+        <result property="pior"    column="pior"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectAtInstVo">
+        select id, inst_id, watch, pior, status, create_time, update_time from at_inst
+    </sql>
+
+    <select id="selectAtInstList" parameterType="AtInst" resultMap="AtInstResult">
+        <include refid="selectAtInstVo"/>
+        <where>  
+            <if test="instId != null  and instId != ''"> and inst_id like concat('%',#{instId},'%')</if>
+            <if test="watch != null "> and watch = #{watch}</if>
+            <if test="pior != null "> and pior = #{pior}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+        ORDER BY watch desc, pior desc
+    </select>
+    
+    <select id="selectAtInstById" parameterType="Long" resultMap="AtInstResult">
+        <include refid="selectAtInstVo"/>
+        where id = #{id}
+    </select>
+    <select id="findByInstId" resultMap="AtInstResult">
+        <include refid="selectAtInstVo"/>
+        where inst_id = #{instId}
+        limit 1
+    </select>
+
+    <insert id="insertAtInst" parameterType="AtInst" useGeneratedKeys="true" keyProperty="id">
+        insert into at_inst
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="instId != null and instId != ''">inst_id,</if>
+            <if test="watch != null">watch,</if>
+            <if test="pior != null">pior,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="instId != null and instId != ''">#{instId},</if>
+            <if test="watch != null">#{watch},</if>
+            <if test="pior != null">#{pior},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAtInst" parameterType="AtInst">
+        update at_inst
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="instId != null and instId != ''">inst_id = #{instId},</if>
+            <if test="watch != null">watch = #{watch},</if>
+            <if test="pior != null">pior = #{pior},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAtInstById" parameterType="Long">
+        delete from at_inst where id = #{id}
+    </delete>
+
+    <delete id="deleteAtInstByIds" parameterType="String">
+        delete from at_inst where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

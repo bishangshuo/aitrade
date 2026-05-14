@@ -53,7 +53,7 @@ public class OkxWsClient {
         //重新计算MACD指标
         compensationTask.recalculateIndicatorsFromDB();
         // 建立WebSocket连接
-        //connect();
+        connect();
     }
 
     private void connect() {
