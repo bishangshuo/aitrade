@@ -2,6 +2,7 @@ package com.aitrade.exchange.task;
 
 import com.aitrade.exchange.component.SymbolManager;
 import com.aitrade.exchange.domain.Kline;
+import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.repository.KlineRepository;
 import com.aitrade.exchange.service.IIndicatorService;
 import com.aitrade.exchange.service.impl.KlineServiceImpl;
@@ -12,6 +13,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,9 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 补偿任务 - 多交易对版本
@@ -49,8 +54,18 @@ public class CompensationTask {
     private SymbolManager symbolManager;
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private static final long ONE_MINUTE_MS = 60000;
     private static final int MAX_BATCH_SIZE = 300;
+
+    @Value("${crypto.time-length}")
+    private long timeLength;
+
+    @Value("${crypto.kline}")
+    private String klineInterval;
+
+    @Value("${crypto.kline-time}")
+    private long klineTime;
+
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * 定时获取最终确认数据（遍历所有活跃交易对）
@@ -76,8 +91,8 @@ public class CompensationTask {
             long lastMinuteStart = ((now / 60000) - 1) * 60000;
 
             String url = String.format(
-                    "https://www.okx.com/api/v5/market/candles?instId=%s&bar=1m&after=%d&limit=1",
-                    symbol, lastMinuteStart / 1000
+                    "https://www.okx.com/api/v5/market/candles?instId=%s&bar=%s&after=%d&limit=1",
+                    symbol, klineInterval, lastMinuteStart / 1000
             );
 
             Request request = new Request.Builder().url(url).build();
@@ -111,16 +126,16 @@ public class CompensationTask {
     /**
      * 重连成功后触发补偿（per-symbol）
      */
-    public void compensateOnReconnect(String symbol) {
+    public void compensateOnReconnect(String symbol, RecoveryHandler handler) {
         try {
             String lastTimeStr = redisTemplate.opsForValue().get("ws:lastTimestamp:" + symbol);
             if (lastTimeStr == null) return;
             long lastTime = Long.parseLong(lastTimeStr);
             long now = System.currentTimeMillis();
-            long diffMinutes = (now - lastTime) / ONE_MINUTE_MS;
+            long diffMinutes = (now - lastTime) / klineTime;
             if (diffMinutes > 1) {
                 log.info("[{}] 重连后检测到 {} 分钟数据缺失，开始补偿...", symbol, diffMinutes);
-                compensateRange(symbol, lastTime);
+                compensateRange(symbol, lastTime, handler);
             }
         } catch (Exception e) {
             log.error("[{}] 重连补偿失败", symbol, e);
@@ -130,26 +145,29 @@ public class CompensationTask {
     /**
      * 精准范围补偿（per-symbol）
      */
-    public void compensateRange(String symbol, long startTime) {
+    public void compensateRange(String symbol, long startTime, RecoveryHandler handler) {
         try {
             log.info("[{}] 开始精准补偿：从 {} 开始", symbol, new Timestamp(startTime));
 
             int fetchSize = MAX_BATCH_SIZE;
-            long afterTime = startTime + fetchSize * ONE_MINUTE_MS;
+            long afterTime = startTime + fetchSize * klineTime;
             long now = System.currentTimeMillis();
             if (now < afterTime) {
                 afterTime = now;
-                fetchSize = (int) ((afterTime - startTime) / ONE_MINUTE_MS);
+                fetchSize = (int) ((afterTime - startTime) / klineTime);
             }
 
             String url = String.format(
-                    "https://www.okx.com/api/v5/market/history-candles?instId=%s&bar=1m&limit=%d&after=%d",
-                    symbol, fetchSize, afterTime
+                    "https://www.okx.com/api/v5/market/history-candles?instId=%s&bar=%s&limit=%d&after=%d",
+                    symbol, klineInterval,  fetchSize, afterTime
             );
 
             List<Kline> klines = fetchKlinesFromHttp(url, symbol);
             if (klines.isEmpty()) {
-                log.warn("[{}] 未获取到任何K线数据", symbol);
+                log.warn("[{}] 未获取到任何K线数据, 获取k线数据结束（完成）", symbol);
+                if(handler != null) {
+                    handler.onComplete(symbol);
+                }
                 return;
             }
 
@@ -171,16 +189,20 @@ public class CompensationTask {
             );
 
             // 继续以 lastOpenTime 为开始时间补偿
-            compensateRange(symbol, lastOpenTime);
+            // 线程停止500ms后继续执行
+            compensateRange(symbol, lastOpenTime, handler);
         } catch (Exception e) {
             log.error("[{}] 范围补偿失败", symbol, e);
+            if(handler != null) {
+                handler.onError(symbol, e);
+            }
         }
     }
 
     /**
      * 程序启动时全量恢复（per-symbol）
      */
-    public void fullRecoveryOnStartup(String symbol) {
+    public void fullRecoveryOnStartup(String symbol, RecoveryHandler handler) {
         try {
             log.info("[{}] ===== 开始启动数据恢复 =====", symbol);
 
@@ -194,15 +216,18 @@ public class CompensationTask {
             long now = System.currentTimeMillis();
 
             if (recoveryStart == 0) {
-                recoveryStart = now - 3600000;
+                recoveryStart = now - timeLength;
             }
 
-            if (now - recoveryStart > ONE_MINUTE_MS) {
+            if (now - recoveryStart > klineTime) {
                 log.info("[{}] 需要恢复从 {} 到现在的数据", symbol, new Timestamp(recoveryStart));
-                compensateRange(symbol, recoveryStart);
+                compensateRange(symbol, recoveryStart, handler);
             }
         } catch (Exception e) {
             log.error("[{}] 启动数据恢复失败", symbol, e);
+            if(handler != null) {
+                handler.onError(symbol, e);
+            }
         }
     }
 

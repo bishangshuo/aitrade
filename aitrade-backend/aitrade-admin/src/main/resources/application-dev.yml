@@ -84,3 +84,10 @@ rag:
     api:
         service: http://192.168.0.60:8013
         key: ragflow-XsujZbPkeVoBpB2Cp6Nf1aPQG_sxo3O9C7WPCX48lbg
+
+
+crypto:
+    time-length: 94608000000
+    kline-time: 900000
+    kline: 15m
+    candle-name: candle15m

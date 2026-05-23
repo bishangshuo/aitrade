@@ -2,6 +2,7 @@ package com.aitrade.exchange.component;
 
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,11 +13,17 @@ public class BinanceWsClient {
 
     private WebSocket webSocket;
 
-    private static final String URL = "wss://stream.binance.us:9443/ws/btcusdt@kline_1m";
+    @Value("${crypto.time-length}")
+    private long timeLength;
+
+    @Value("${crypto.kline}")
+    private String klineInterval;
+
+//    private static final String URL = String.format("wss://stream.binance.us:9443/ws/btcusdt@kline_%s", klineInterval);
 
 //    @PostConstruct
     public void start() {
-
+        String URL = String.format("wss://stream.binance.us:9443/ws/btcusdt@kline_%s", klineInterval);
         Request request = new Request.Builder()
                 .url(URL)
                 .build();

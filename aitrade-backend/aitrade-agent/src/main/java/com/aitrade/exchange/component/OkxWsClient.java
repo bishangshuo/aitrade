@@ -3,10 +3,10 @@ package com.aitrade.exchange.component;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.domain.SymbolState;
 import com.aitrade.exchange.event.SymbolChangeEvent;
+import com.aitrade.exchange.handler.RecoveryHandler;
+import com.aitrade.exchange.handler.WsConnectionOpenHandler;
 import com.aitrade.exchange.service.IKlineService;
 import com.aitrade.exchange.task.CompensationTask;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -18,6 +18,7 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -30,7 +31,7 @@ import java.util.concurrent.*;
  * OKX WebSocket 客户端 - 多交易对版本
  *
  * 核心改动：
- * 1. 单连接订阅多个交易对的 candle1m 频道
+ * 1. 单连接订阅多个交易对的 candle15m 频道
  * 2. 从消息的 arg.instId 字段提取交易对，路由到对应 SymbolState
  * 3. 监听 SymbolChangeEvent，动态 subscribe / unsubscribe
  * 4. 重连时自动重新订阅所有活跃交易对
@@ -50,8 +51,19 @@ public class OkxWsClient {
     @Autowired
     private SymbolManager symbolManager;
 
+    @Value("${crypto.time-length}")
+    private long timeLength;
+
+    @Value("${crypto.kline}")
+    private String klineInterval;
+
+    @Value("${crypto.candle-name}")
+    private String candleName;
+
+    @Value("${crypto.kline-time}")
+    private long klineTime;
+
     private static final String URL = "wss://wspap.okx.com:8443/ws/v5/business";
-    private static final long ONE_MINUTE_MS = 60000;
     private static final long MAX_RETRY_INTERVAL = 60000;
     private long retryInterval = 1000;
     private volatile boolean isManualClose = false;
@@ -67,15 +79,37 @@ public class OkxWsClient {
         // 1. 初始化默认交易对（如果Redis中没有的话）
         symbolManager.initDefaultsIfEmpty();
 
-        // 2. 恢复数据 & 重算指标（遍历所有活跃交易对）
-        for (String symbol : symbolManager.getActiveSymbols()) {
-            getOrCreateSymbolState(symbol);
-            compensationTask.fullRecoveryOnStartup(symbol);
-            compensationTask.recalculateIndicatorsFromDB(symbol);
-        }
+        // 2. 建立 WebSocket 连接
+        connect(new WsConnectionOpenHandler() {
+            @Override
+            public void onOpen() {
+                // 3. 恢复数据 & 重算指标（遍历所有活跃交易对）
+                for (String symbol : symbolManager.getActiveSymbols()) {
+                    getOrCreateSymbolState(symbol);
+                    compensationTask.fullRecoveryOnStartup(symbol,new RecoveryHandler() {
 
-        // 3. 建立 WebSocket 连接
-        connect();
+                        @Override
+                        public void onComplete(String symbol) {
+                            //恢复完成才订阅
+                            subscribeSymbol(symbol);
+                            //并开始计算k线指标
+                            compensationTask.recalculateIndicatorsFromDB(symbol);
+                        }
+
+                        @Override
+                        public void onError(String symbol, Throwable t) {
+
+                        }
+
+                        @Override
+                        public void onProgress(String symbol, int progress) {
+
+                        }
+                    });
+                }
+            }
+        });
+
     }
 
     /**
@@ -87,10 +121,28 @@ public class OkxWsClient {
         switch (event.getAction()) {
             case ADD -> {
                 getOrCreateSymbolState(symbol);
-                subscribeSymbol(symbol);
                 // 新增交易对时触发一次全量恢复
-                compensationTask.fullRecoveryOnStartup(symbol);
-                compensationTask.recalculateIndicatorsFromDB(symbol);
+                compensationTask.fullRecoveryOnStartup(symbol, new RecoveryHandler() {
+
+                    @Override
+                    public void onComplete(String symbol) {
+                        //恢复完成才订阅
+                        subscribeSymbol(symbol);
+                        //并开始计算k线指标
+                        compensationTask.recalculateIndicatorsFromDB(symbol);
+                    }
+
+                    @Override
+                    public void onError(String symbol, Throwable t) {
+
+                    }
+
+                    @Override
+                    public void onProgress(String symbol, int progress) {
+
+                    }
+                });
+
                 log.info("动态订阅交易对: {}", symbol);
             }
             case REMOVE -> {
@@ -108,7 +160,7 @@ public class OkxWsClient {
         return symbolStateMap.computeIfAbsent(symbol, SymbolState::new);
     }
 
-    private void connect() {
+    private void connect(WsConnectionOpenHandler onOpenHandler) {
         Request request = new Request.Builder()
                 .url(URL)
                 .build();
@@ -119,10 +171,12 @@ public class OkxWsClient {
                 log.info("WebSocket connected");
                 isManualClose = false;
                 retryInterval = 1000;
-                // 连接成功后，订阅所有活跃交易对
-                subscribeAllActiveSymbols();
                 // 启动心跳保活
                 startHeartbeat(webSocket);
+
+                if(onOpenHandler != null) {
+                    onOpenHandler.onOpen();
+                }
             }
 
             @Override
@@ -158,39 +212,13 @@ public class OkxWsClient {
     }
 
     /**
-     * 订阅所有活跃交易对
-     */
-    private void subscribeAllActiveSymbols() {
-        Set<String> symbols = symbolManager.getActiveSymbols();
-        if (symbols.isEmpty()) {
-            log.warn("无活跃交易对需要订阅");
-            return;
-        }
-
-        // 构建批量订阅消息
-        StringBuilder argsBuilder = new StringBuilder();
-        for (String symbol : symbols) {
-            if (argsBuilder.length() > 0) {
-                argsBuilder.append(",");
-            }
-            argsBuilder.append(String.format(
-                    "{\"channel\":\"candle1m\",\"instId\":\"%s\"}", symbol));
-        }
-
-        String subscribeMsg = String.format(
-                "{\"op\":\"subscribe\",\"args\":[%s]}", argsBuilder);
-        webSocket.send(subscribeMsg);
-        log.info("已订阅 {} 个交易对: {}", symbols.size(), symbols);
-    }
-
-    /**
      * 动态订阅单个交易对
      */
     private void subscribeSymbol(String symbol) {
         if (webSocket != null) {
             String subscribeMsg = String.format(
-                    "{\"op\":\"subscribe\",\"args\":[{\"channel\":\"candle1m\",\"instId\":\"%s\"}]}",
-                    symbol);
+                    "{\"op\":\"subscribe\",\"args\":[{\"channel\":\"%s\",\"instId\":\"%s\"}]}",
+                    candleName, symbol);
             webSocket.send(subscribeMsg);
             log.info("发送订阅请求: {}", symbol);
         }
@@ -202,8 +230,8 @@ public class OkxWsClient {
     private void unsubscribeSymbol(String symbol) {
         if (webSocket != null) {
             String unsubMsg = String.format(
-                    "{\"op\":\"unsubscribe\",\"args\":[{\"channel\":\"candle1m\",\"instId\":\"%s\"}]}",
-                    symbol);
+                    "{\"op\":\"unsubscribe\",\"args\":[{\"channel\":\"%s\",\"instId\":\"%s\"}]}",
+                    candleName, symbol);
             webSocket.send(unsubMsg);
             log.info("发送取消订阅请求: {}", symbol);
         }
@@ -214,7 +242,7 @@ public class OkxWsClient {
      *
      * OKX 推送数据结构：
      * {
-     *   "arg": {"channel": "candle1m", "instId": "BTC-USDT"},
+     *   "arg": {"channel": "candleName", "instId": "BTC-USDT"},
      *   "data": [[ts, o, h, l, c, vol, volCcy, volCcyQuote, confirm], ...]
      * }
      */
@@ -245,14 +273,14 @@ public class OkxWsClient {
             // 1. 时间戳连续性检测（检测数据缺失）
             if (state.getLastTimestamp() > 0) {
                 long diff = currentTimestamp - state.getLastTimestamp();
-                if (diff > ONE_MINUTE_MS + 1000) {
-                    long missingCount = diff / ONE_MINUTE_MS - 1;
+                if (diff > klineTime + 1000) {
+                    long missingCount = diff / klineTime - 1;
                     log.warn("[{}] 检测到 {} 条K线缺失！从 {} 到 {}",
                             symbol, missingCount, state.getLastTimestamp(), currentTimestamp);
-                    final long startTime = state.getLastTimestamp() + ONE_MINUTE_MS;
+                    final long startTime = state.getLastTimestamp() + klineTime;
                     final String finalSymbol = symbol;
                     CompletableFuture.runAsync(() ->
-                            compensationTask.compensateRange(finalSymbol, startTime));
+                            compensationTask.compensateRange(finalSymbol, startTime, null));
                 }
             }
             state.setLastTimestamp(currentTimestamp);
@@ -315,11 +343,35 @@ public class OkxWsClient {
             try {
                 log.info("将在 {}ms 后重连...", retryInterval);
                 Thread.sleep(retryInterval);
-                connect();
-                // 重连成功后触发所有活跃交易对的补偿
-                for (String symbol : symbolManager.getActiveSymbols()) {
-                    compensationTask.compensateOnReconnect(symbol);
-                }
+                connect(new WsConnectionOpenHandler() {
+                    @Override
+                    public void onOpen() {
+                        // 重连成功后触发所有活跃交易对的补偿
+                        for (String symbol : symbolManager.getActiveSymbols()) {
+                            compensationTask.compensateOnReconnect(symbol, new RecoveryHandler() {
+
+                                @Override
+                                public void onComplete(String symbol) {
+                                    //恢复完成才订阅
+                                    subscribeSymbol(symbol);
+                                    //并开始计算k线指标
+                                    compensationTask.recalculateIndicatorsFromDB(symbol);
+                                }
+
+                                @Override
+                                public void onError(String symbol, Throwable t) {
+
+                                }
+
+                                @Override
+                                public void onProgress(String symbol, int progress) {
+
+                                }
+                            });
+                        }
+                    }
+                });
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {

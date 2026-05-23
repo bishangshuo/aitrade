@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -26,9 +27,14 @@ public class KlineRepository {
     private static final Logger log = LoggerFactory.getLogger(KlineRepository.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final String tableName;
 
     @Autowired
-    public KlineRepository(@Qualifier("timescaleJdbcTemplate") JdbcTemplate jdbcTemplate) {
+    public KlineRepository(
+            @Qualifier("timescaleJdbcTemplate") JdbcTemplate jdbcTemplate,
+            @Value("${crypto.kline}") String klineInterval
+    ) {
+        this.tableName = String.format("kline_%s", klineInterval);
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -38,8 +44,8 @@ public class KlineRepository {
      * 当遇到相同symbol+open_time的记录时，更新所有字段
      */
     public void upsert(Kline k) {
-        String sql = """
-            INSERT INTO kline_1m(symbol, open_time, open, high, low, close, volume, quote_volume, is_final)
+        String sql = String.format("""
+            INSERT INTO %s(symbol, open_time, open, high, low, close, volume, quote_volume, is_final)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (symbol, open_time)
             DO UPDATE SET
@@ -50,7 +56,7 @@ public class KlineRepository {
               volume = EXCLUDED.volume,
               quote_volume = EXCLUDED.quote_volume,
               is_final = EXCLUDED.is_final
-            """;
+            """, tableName);
 
         try {
             int rows = jdbcTemplate.update(sql,
@@ -76,8 +82,8 @@ public class KlineRepository {
      * 批量插入或更新K线数据
      */
     public void batchUpsert(List<Kline> klines) {
-        String sql = """
-            INSERT INTO kline_1m(symbol, open_time, open, high, low, close, volume, quote_volume, is_final)
+        String sql = String.format("""
+            INSERT INTO %s(symbol, open_time, open, high, low, close, volume, quote_volume, is_final)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (symbol, open_time)
             DO UPDATE SET
@@ -88,7 +94,7 @@ public class KlineRepository {
               volume = EXCLUDED.volume,
               quote_volume = EXCLUDED.quote_volume,
               is_final = EXCLUDED.is_final
-            """;
+            """, tableName);
 
         try {
             jdbcTemplate.batchUpdate(sql, klines, klines.size(), (ps, k) -> {
@@ -113,7 +119,7 @@ public class KlineRepository {
      * 获取指定symbol的最后一条K线时间戳
      */
     public Long getLastOpenTime(String symbol) {
-        String sql = "SELECT MAX(open_time) FROM kline_1m WHERE symbol = ?";
+        String sql = String.format("SELECT MAX(open_time) FROM %s WHERE symbol = ?", tableName);
         try {
             // 使用 Timestamp 类型接收数据库返回的时间戳
             Timestamp timestamp = jdbcTemplate.queryForObject(sql, Timestamp.class, symbol);
@@ -133,12 +139,12 @@ public class KlineRepository {
      * 获取最新的N条K线数据
      */
     public List<Kline> findLatest(String symbol, int limit) {
-        String sql = """
-            SELECT * FROM kline_1m 
+        String sql = String.format("""
+            SELECT * FROM %s 
             WHERE symbol = ? 
             ORDER BY open_time DESC 
             LIMIT ?
-            """;
+            """, tableName);
         try {
             return jdbcTemplate.query(sql,
                     new Object[]{symbol, limit},
@@ -153,12 +159,12 @@ public class KlineRepository {
      * 查询指定时间范围内的K线数据
      */
     public List<Kline> findByTimeRange(String symbol, long startTime, long endTime) {
-        String sql = """
-            SELECT * FROM kline_1m 
+        String sql = String.format("""
+            SELECT * FROM %s 
             WHERE symbol = ? 
             AND open_time BETWEEN ? AND ?
             ORDER BY open_time ASC
-            """;
+            """, tableName);
         try {
             return jdbcTemplate.query(sql,
                     new Object[]{
@@ -178,7 +184,7 @@ public class KlineRepository {
      * 统计指定symbol的K线总数
      */
     public long count(String symbol) {
-        String sql = "SELECT COUNT(*) FROM kline_1m WHERE symbol = ?";
+        String sql = String.format("SELECT COUNT(*) FROM %s WHERE symbol = ?", tableName);
         try {
             Long count = jdbcTemplate.queryForObject(sql, Long.class, symbol);
             return count != null ? count : 0;
@@ -192,7 +198,7 @@ public class KlineRepository {
      * 删除指定时间之前的K线数据（数据清理）
      */
     public int deleteBefore(String symbol, long beforeTime) {
-        String sql = "DELETE FROM kline_1m WHERE symbol = ? AND open_time < ?";
+        String sql = String.format("DELETE FROM %s WHERE symbol = ? AND open_time < ?", tableName);
         try {
             int rows = jdbcTemplate.update(sql, symbol, new Timestamp(beforeTime));
             log.info("清理K线数据: symbol={}, before={}, rows={}",
