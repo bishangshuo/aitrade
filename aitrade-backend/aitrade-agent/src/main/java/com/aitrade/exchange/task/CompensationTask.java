@@ -88,11 +88,11 @@ public class CompensationTask {
     private void finalizeLastMinuteKlineForSymbol(String symbol) {
         try {
             long now = System.currentTimeMillis();
-            long lastMinuteStart = ((now / 60000) - 1) * 60000;
+            long lastKlineStart = ((now / klineTime) - 1) * klineTime;
 
             String url = String.format(
                     "https://www.okx.com/api/v5/market/candles?instId=%s&bar=%s&after=%d&limit=1",
-                    symbol, klineInterval, lastMinuteStart / 1000
+                    symbol, klineInterval, lastKlineStart + klineTime
             );
 
             Request request = new Request.Builder().url(url).build();
@@ -133,7 +133,7 @@ public class CompensationTask {
             long lastTime = Long.parseLong(lastTimeStr);
             long now = System.currentTimeMillis();
             long diffMinutes = (now - lastTime) / klineTime;
-            if (diffMinutes > 1) {
+            if (diffMinutes > 15) {
                 log.info("[{}] 重连后检测到 {} 分钟数据缺失，开始补偿...", symbol, diffMinutes);
                 compensateRange(symbol, lastTime, handler);
             }
@@ -190,6 +190,7 @@ public class CompensationTask {
 
             // 继续以 lastOpenTime 为开始时间补偿
             // 线程停止500ms后继续执行
+            Thread.sleep(500);
             compensateRange(symbol, lastOpenTime, handler);
         } catch (Exception e) {
             log.error("[{}] 范围补偿失败", symbol, e);
@@ -222,6 +223,10 @@ public class CompensationTask {
             if (now - recoveryStart > klineTime) {
                 log.info("[{}] 需要恢复从 {} 到现在的数据", symbol, new Timestamp(recoveryStart));
                 compensateRange(symbol, recoveryStart, handler);
+            } else {
+                if(handler != null) {
+                    handler.onComplete(symbol);
+                }
             }
         } catch (Exception e) {
             log.error("[{}] 启动数据恢复失败", symbol, e);

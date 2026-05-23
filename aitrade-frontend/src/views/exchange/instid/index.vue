@@ -77,7 +77,7 @@
             v-model="scope.row.watch"
             :active-value="1"
             :inactive-value="0"
-            disabled
+            @change="handleWatchChange(scope.row)"
           ></el-switch>
         </template>
       </el-table-column>
@@ -88,7 +88,7 @@
             v-model="scope.row.status"
             :active-value="1"
             :inactive-value="0"
-            disabled
+            @change="handleStatusChange(scope.row)"
           ></el-switch>
         </template>
       </el-table-column>
@@ -267,6 +267,23 @@ export default {
         this.title = "修改币种管理"
       })
     },
+
+    handleWatchChange(row) {
+      updateInstid(row).then(response => {
+              this.$modal.msgSuccess("修改成功")
+              this.open = false
+              this.getList()
+            })
+    },
+
+    handleStatusChange(row) {
+      updateInstid(row).then(response => {
+              this.$modal.msgSuccess("修改成功")
+              this.open = false
+              this.getList()
+            })
+    },
+
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {

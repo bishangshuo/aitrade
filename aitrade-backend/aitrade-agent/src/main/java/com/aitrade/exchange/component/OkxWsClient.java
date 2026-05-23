@@ -1,5 +1,6 @@
 package com.aitrade.exchange.component;
 
+import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.domain.SymbolState;
 import com.aitrade.exchange.event.SymbolChangeEvent;
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /**
  * OKX WebSocket 客户端 - 多交易对版本
@@ -63,6 +66,9 @@ public class OkxWsClient {
     @Value("${crypto.kline-time}")
     private long klineTime;
 
+    @Resource(name = "threadPoolTaskExecutor")
+    private Executor taskExecutor;
+
     private static final String URL = "wss://wspap.okx.com:8443/ws/v5/business";
     private static final long MAX_RETRY_INTERVAL = 60000;
     private long retryInterval = 1000;
@@ -74,6 +80,26 @@ public class OkxWsClient {
     /** 每个交易对的运行时状态 */
     private final ConcurrentHashMap<String, SymbolState> symbolStateMap = new ConcurrentHashMap<>();
 
+    private final RecoveryHandler recoveryHandler = new RecoveryHandler() {
+        @Override
+        public void onComplete(String symbol) {
+            //恢复完成才订阅
+            subscribeSymbol(symbol);
+            //并开始计算k线指标
+            compensationTask.recalculateIndicatorsFromDB(symbol);
+        }
+
+        @Override
+        public void onError(String symbol, Throwable t) {
+
+        }
+
+        @Override
+        public void onProgress(String symbol, int progress) {
+
+        }
+    };
+
     @PostConstruct
     public void start() {
         // 1. 初始化默认交易对（如果Redis中没有的话）
@@ -84,29 +110,14 @@ public class OkxWsClient {
             @Override
             public void onOpen() {
                 // 3. 恢复数据 & 重算指标（遍历所有活跃交易对）
-                for (String symbol : symbolManager.getActiveSymbols()) {
-                    getOrCreateSymbolState(symbol);
-                    compensationTask.fullRecoveryOnStartup(symbol,new RecoveryHandler() {
+                List<CompletableFuture<Void>> futures = symbolManager.getActiveSymbols().stream()
+                        .map(symbol -> CompletableFuture.runAsync(() -> {
+                            getOrCreateSymbolState(symbol);
+                            compensationTask.fullRecoveryOnStartup(symbol, recoveryHandler);
+                        }, taskExecutor)) // 传入自定义线程池
+                        .collect(Collectors.toList());
 
-                        @Override
-                        public void onComplete(String symbol) {
-                            //恢复完成才订阅
-                            subscribeSymbol(symbol);
-                            //并开始计算k线指标
-                            compensationTask.recalculateIndicatorsFromDB(symbol);
-                        }
-
-                        @Override
-                        public void onError(String symbol, Throwable t) {
-
-                        }
-
-                        @Override
-                        public void onProgress(String symbol, int progress) {
-
-                        }
-                    });
-                }
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).join();
             }
         });
 
@@ -122,26 +133,7 @@ public class OkxWsClient {
             case ADD -> {
                 getOrCreateSymbolState(symbol);
                 // 新增交易对时触发一次全量恢复
-                compensationTask.fullRecoveryOnStartup(symbol, new RecoveryHandler() {
-
-                    @Override
-                    public void onComplete(String symbol) {
-                        //恢复完成才订阅
-                        subscribeSymbol(symbol);
-                        //并开始计算k线指标
-                        compensationTask.recalculateIndicatorsFromDB(symbol);
-                    }
-
-                    @Override
-                    public void onError(String symbol, Throwable t) {
-
-                    }
-
-                    @Override
-                    public void onProgress(String symbol, int progress) {
-
-                    }
-                });
+                compensationTask.fullRecoveryOnStartup(symbol, recoveryHandler);
 
                 log.info("动态订阅交易对: {}", symbol);
             }
@@ -303,16 +295,19 @@ public class OkxWsClient {
             k.setIsFinal(isFinal);
 
             // 4. 更新 Redis 中的最后接收时间戳
-            redisTemplate.opsForValue().set(
-                    "ws:lastTimestamp:" + symbol,
-                    String.valueOf(currentTimestamp)
-            );
+            // 只有isFinal持久化缓存
+            if(isFinal) {
+                redisTemplate.opsForValue().set(
+                        "ws:lastTimestamp:" + symbol,
+                        String.valueOf(currentTimestamp)
+                );
+            }
 
             // 5. 处理K线数据
             klineService.process(k, isFinal);
 
             log.debug("[{}] 收到K线数据: time={}, close={}, confirm={}",
-                    symbol, currentTimestamp, k.getClose(), confirm);
+                    symbol, DateUtils.formatDate(DateUtils.fromTimestamp(currentTimestamp/1000)), k.getClose(), confirm);
         } catch (Exception e) {
             log.error("解析WebSocket消息失败: {}", text, e);
         }
@@ -348,26 +343,7 @@ public class OkxWsClient {
                     public void onOpen() {
                         // 重连成功后触发所有活跃交易对的补偿
                         for (String symbol : symbolManager.getActiveSymbols()) {
-                            compensationTask.compensateOnReconnect(symbol, new RecoveryHandler() {
-
-                                @Override
-                                public void onComplete(String symbol) {
-                                    //恢复完成才订阅
-                                    subscribeSymbol(symbol);
-                                    //并开始计算k线指标
-                                    compensationTask.recalculateIndicatorsFromDB(symbol);
-                                }
-
-                                @Override
-                                public void onError(String symbol, Throwable t) {
-
-                                }
-
-                                @Override
-                                public void onProgress(String symbol, int progress) {
-
-                                }
-                            });
+                            compensationTask.compensateOnReconnect(symbol, recoveryHandler);
                         }
                     }
                 });
