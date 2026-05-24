@@ -135,7 +135,7 @@ public class OkxWsClient {
                 // 新增交易对时触发一次全量恢复
                 compensationTask.fullRecoveryOnStartup(symbol, recoveryHandler);
 
-                log.info("动态订阅交易对: {}", symbol);
+                log.info(": {}", symbol);
             }
             case REMOVE -> {
                 unsubscribeSymbol(symbol);

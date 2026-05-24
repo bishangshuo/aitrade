@@ -164,9 +164,16 @@ public class CompensationTask {
 
             List<Kline> klines = fetchKlinesFromHttp(url, symbol);
             if (klines.isEmpty()) {
-                log.warn("[{}] 未获取到任何K线数据, 获取k线数据结束（完成）", symbol);
-                if(handler != null) {
-                    handler.onComplete(symbol);
+                log.warn("[{}] 未获取到任何K线数据", symbol);
+
+                //有可能币种是后面才上的，前面没有数据，则需要移动开始时间到下一个时间点接续
+                long nextStartTime = startTime + klineTime * fetchSize;
+                if(nextStartTime < now) {
+                    compensateRange(symbol, nextStartTime, handler);
+                } else {
+                    if (handler != null) {
+                        handler.onComplete(symbol);
+                    }
                 }
                 return;
             }
