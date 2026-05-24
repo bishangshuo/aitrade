@@ -168,7 +168,10 @@ public class CompensationTask {
 
                 //有可能币种是后面才上的，前面没有数据，则需要移动开始时间到下一个时间点接续
                 long nextStartTime = startTime + klineTime * fetchSize;
-                if(nextStartTime < now) {
+                long nextStartTime15 = nextStartTime / klineTime;
+                long now15 = now / klineTime;
+
+                if(nextStartTime15 < now15) {
                     compensateRange(symbol, nextStartTime, handler);
                 } else {
                     if (handler != null) {
