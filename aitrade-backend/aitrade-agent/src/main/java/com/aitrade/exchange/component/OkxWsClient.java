@@ -2,7 +2,6 @@ package com.aitrade.exchange.component;
 
 import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.domain.Kline;
-import com.aitrade.exchange.domain.SymbolState;
 import com.aitrade.exchange.event.SymbolChangeEvent;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.handler.WsConnectionOpenHandler;
@@ -85,8 +84,6 @@ public class OkxWsClient {
         public void onComplete(String symbol) {
             //恢复完成才订阅
             subscribeSymbol(symbol);
-            //并开始计算k线指标
-            compensationTask.recalculateIndicatorsFromDB(symbol);
         }
 
         @Override

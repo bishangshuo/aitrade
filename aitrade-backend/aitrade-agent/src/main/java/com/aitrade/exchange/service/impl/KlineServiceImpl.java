@@ -1,8 +1,8 @@
 package com.aitrade.exchange.service.impl;
 
+import com.aitrade.exchange.component.SymbolState;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.repository.KlineRepository;
-import com.aitrade.exchange.service.IIndicatorService;
 import com.aitrade.exchange.service.IKlineService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -31,8 +32,6 @@ public class KlineServiceImpl implements IKlineService {
     @Autowired
     private KlineRepository repo;
     @Autowired
-    private IIndicatorService indicatorService;
-    @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
     // 只对已确认的K线做去重，防止重复写入数据库
@@ -44,14 +43,13 @@ public class KlineServiceImpl implements IKlineService {
     /** 每个交易对上一根已确认的K线数据 */
     private final ConcurrentHashMap<String, Kline> lastConfirmedKlineMap = new ConcurrentHashMap<>();
 
+    private final Map<String, SymbolState> symbolStates = new ConcurrentHashMap<>();
+
     @Override
     public void process(Kline k, boolean isFinal) {
         String symbol = k.getSymbol();
 
         // ========== 第一部分：实时更新 - 每次推送都执行 ==========
-
-        // 1. 每次推送都更新MACD指标（实时性保障）
-        indicatorService.updateMACD(symbol, k.getClose().doubleValue());
 
         // 2. 更新Redis缓存（覆盖旧值，保留最新数据）
         String cacheKey = "kline:live:" + symbol + ":" + k.getOpenTime();
@@ -111,22 +109,56 @@ public class KlineServiceImpl implements IKlineService {
             log.info("[{}] 最终确认K线写入数据库: time={}, close={}, open={}, high={}, low={}, volume={}",
                     symbol, k.getOpenTime(), k.getClose(), k.getOpen(),
                     k.getHigh(), k.getLow(), k.getVolume());
+
+            SymbolState state = getOrCreateState(symbol);
+            state.addBar(k, true);                    // 更新 TA4J
+
+            // 触发策略计算
+            fireStrategySignal(k);
         }
+    }
+
+    private SymbolState getOrCreateState(String symbol) {
+        return symbolStates.computeIfAbsent(symbol, s -> {
+            SymbolState newState = new SymbolState(s);   // 使用你修改后的 SymbolState
+            // 可选：在这里预加载最近的历史数据加速初始化
+            return newState;
+        });
     }
 
     /**
      * 触发策略信号（当一根K线确认结束时调用）
      */
     private void fireStrategySignal(Kline k) {
-        log.info("[{}] K线{}确认结束，触发策略信号计算，close={}",
-                k.getSymbol(), k.getOpenTime(), k.getClose());
-        // 在这里添加你的策略逻辑
+        String symbol = k.getSymbol();
+
+        // 获取 SymbolState
+        SymbolState state = getOrCreateState(symbol);   // 使用你之前添加的 getOrCreateState 方法
+
+        if (state == null) {
+            log.warn("[{}] SymbolState 未初始化，跳过策略计算", symbol);
+            return;
+        }
+
+        // 更新 TA4J 数据并计算策略信号
+        state.addBar(k, true);
+
+        log.debug("[{}] 策略信号计算完成 - close={}", symbol, k.getClose());
     }
+
 
     /**
      * 批量处理补偿数据（用于补偿任务）
      */
-    public void processBatch(List<Kline> klines, boolean recalculateMACD) {
+    public void processBatch(List<Kline> klines) {
+        if (klines.isEmpty()) return;
+
+        String symbol = klines.get(0).getSymbol();
+        SymbolState state = getOrCreateState(symbol);
+
+        // 批量加载到 TA4J
+        state.loadHistoricalBars(klines);
+
         for (Kline k : klines) {
             k.setIsFinal(true);
 
@@ -136,10 +168,6 @@ public class KlineServiceImpl implements IKlineService {
             }
 
             repo.upsert(k);
-
-            if (recalculateMACD) {
-                indicatorService.updateMACD(k.getSymbol(), k.getClose().doubleValue());
-            }
         }
         if (!klines.isEmpty()) {
             log.info("批量处理 {} 条补偿数据", klines.size());

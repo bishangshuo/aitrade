@@ -1,6 +1,7 @@
 package com.aitrade.exchange.repository;
 
 
+import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.domain.Kline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,9 +72,9 @@ public class KlineRepository {
                     k.getIsFinal() != null && k.getIsFinal()
             );
             log.debug("K线UPSERT成功: symbol={}, time={}, rows={}",
-                    k.getSymbol(), k.getOpenTime(), rows);
+                    k.getSymbol(), DateUtils.formatDate(DateUtils.fromTimestamp(k.getOpenTime()/1000)), rows);
         } catch (Exception e) {
-            log.error("K线UPSERT失败: symbol={}, time={}", k.getSymbol(), k.getOpenTime(), e);
+            log.error("K线UPSERT失败: symbol={}, time={}", k.getSymbol(), DateUtils.formatDate(DateUtils.fromTimestamp(k.getOpenTime()/1000)), e);
             throw new RuntimeException("K线数据写入失败", e);
         }
     }

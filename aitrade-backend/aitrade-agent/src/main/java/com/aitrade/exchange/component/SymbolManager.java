@@ -94,9 +94,9 @@ public class SymbolManager {
                 }
             }
         }
-        if (getActiveSymbols().isEmpty()) {
-            log.info("未发现活跃交易对，初始化默认: BTC-USDT");
-            addSymbol("BTC-USDT");
-        }
+//        if (getActiveSymbols().isEmpty()) {
+//            log.info("未发现活跃交易对，初始化默认: BTC-USDT");
+//            addSymbol("BTC-USDT");
+//        }
     }
 }

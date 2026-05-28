@@ -1,6 +1,8 @@
 package com.aitrade.exchange.service.impl;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.component.SymbolManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,11 +78,14 @@ public class AtInstServiceImpl implements IAtInstService
 
         //添加监控
         if(old.getWatch().equals(0) && atInst.getWatch().equals(1)) {
-            symbolManager.addSymbol(atInst.getInstId());
+            //这里应该创建线程来添加交易对,异步
+            new Thread(() -> {symbolManager.addSymbol(atInst.getInstId());}).start();
+            //symbolManager.addSymbol(atInst.getInstId());
         }
         //删除监控
         else if(old.getWatch().equals(1) && atInst.getWatch().equals(0)) {
-            symbolManager.removeSymbol(atInst.getInstId());
+            new Thread(() -> {symbolManager.removeSymbol(atInst.getInstId());}).start();
+            //symbolManager.removeSymbol(atInst.getInstId());
         }
         return res;
     }

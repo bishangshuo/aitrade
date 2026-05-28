@@ -4,7 +4,6 @@ import com.aitrade.exchange.component.SymbolManager;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.repository.KlineRepository;
-import com.aitrade.exchange.service.IIndicatorService;
 import com.aitrade.exchange.service.impl.KlineServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,17 +14,14 @@ import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 补偿任务 - 多交易对版本
@@ -47,8 +43,6 @@ public class CompensationTask {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
-    private IIndicatorService indicatorService;
-    @Autowired
     private KlineServiceImpl klineService;
     @Autowired
     private SymbolManager symbolManager;
@@ -66,62 +60,6 @@ public class CompensationTask {
     private long klineTime;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-    /**
-     * 定时获取最终确认数据（遍历所有活跃交易对）
-     * 每分钟的第5秒执行
-     */
-    @Scheduled(cron = "5 * * * * *")
-    public void finalizeLastMinuteKline() {
-        Set<String> symbols = symbolManager.getActiveSymbols();
-        if (symbols.isEmpty()) return;
-
-        // 并行处理所有交易对
-        for (String symbol : symbols) {
-            CompletableFuture.runAsync(() -> finalizeLastMinuteKlineForSymbol(symbol));
-        }
-    }
-
-    /**
-     * 对单个交易对执行定时确认
-     */
-    private void finalizeLastMinuteKlineForSymbol(String symbol) {
-        try {
-            long now = System.currentTimeMillis();
-            long lastKlineStart = ((now / klineTime) - 1) * klineTime;
-
-            String url = String.format(
-                    "https://www.okx.com/api/v5/market/candles?instId=%s&bar=%s&after=%d&limit=1",
-                    symbol, klineInterval, lastKlineStart + klineTime
-            );
-
-            Request request = new Request.Builder().url(url).build();
-            try (Response response = client.newCall(request).execute()) {
-                if (response.body() == null) return;
-                JsonNode root = mapper.readTree(response.body().string());
-                if (!root.has("data") || root.get("data").size() == 0) return;
-
-                JsonNode arr = root.get("data").get(0);
-                Kline k = new Kline();
-                k.setSymbol(symbol);
-                k.setOpenTime(arr.get(0).asLong());
-                k.setOpen(new BigDecimal(arr.get(1).asText()));
-                k.setHigh(new BigDecimal(arr.get(2).asText()));
-                k.setLow(new BigDecimal(arr.get(3).asText()));
-                k.setClose(new BigDecimal(arr.get(4).asText()));
-                k.setVolume(new BigDecimal(arr.get(5).asText()));
-                if (arr.size() > 6) {
-                    k.setQuoteVolume(new BigDecimal(arr.get(6).asText()));
-                }
-                k.setIsFinal(true);
-
-                klineService.process(k, true);
-                log.info("[{}] 定时任务确认K线: time={}, close={}", symbol, k.getOpenTime(), k.getClose());
-            }
-        } catch (Exception e) {
-            log.error("[{}] 定时确认K线任务失败", symbol, e);
-        }
-    }
 
     /**
      * 重连成功后触发补偿（per-symbol）
@@ -189,7 +127,7 @@ public class CompensationTask {
                     new Timestamp(klines.get(0).getOpenTime()),
                     new Timestamp(klines.get(klines.size() - 1).getOpenTime()));
 
-            klineService.processBatch(klines, true);
+            klineService.processBatch(klines);
 
             Kline lastKline = klines.get(klines.size() - 1);
             long lastOpenTime = lastKline.getOpenTime();
@@ -236,6 +174,7 @@ public class CompensationTask {
             } else {
                 if(handler != null) {
                     handler.onComplete(symbol);
+                    log.info("[{}] 数据恢复 + TA4J 初始化完成", symbol);
                 }
             }
         } catch (Exception e) {
@@ -243,26 +182,6 @@ public class CompensationTask {
             if(handler != null) {
                 handler.onError(symbol, e);
             }
-        }
-    }
-
-    /**
-     * MACD指标重算（per-symbol）
-     */
-    public void recalculateIndicatorsFromDB(String symbol) {
-        List<Kline> recentKlines = repo.findLatest(symbol, 2000);
-        if (!recentKlines.isEmpty()) {
-            recentKlines.sort(Comparator.comparingLong(Kline::getOpenTime));
-
-            // 重置MACD状态
-            String key = "indicator:" + symbol;
-            redisTemplate.opsForHash().delete(key, "ema12", "ema26", "macd");
-
-            // 重新计算
-            for (Kline k : recentKlines) {
-                indicatorService.updateMACD(symbol, k.getClose().doubleValue());
-            }
-            log.info("[{}] MACD指标重新计算完成，使用了 {} 条历史数据", symbol, recentKlines.size());
         }
     }
 
