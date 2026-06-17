@@ -7,10 +7,6 @@ import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBar;
 import org.ta4j.core.BaseBarSeriesBuilder;
-import org.ta4j.core.indicators.ATRIndicator;
-import org.ta4j.core.indicators.RSIIndicator;
-import org.ta4j.core.indicators.SMAIndicator;
-import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.aggregator.BaseBarSeriesAggregator;
 import org.ta4j.core.aggregator.DurationBarAggregator;
 import org.ta4j.core.num.DecimalNum;   // ← 新增导入
@@ -27,92 +23,109 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class SymbolState implements Serializable {
 
-    /** 交易对，如 BTC-USDT */
+    /** 交易對，如 BTC-USDT */
     private String symbol;
 
-    /** WebSocket 最后收到的时间戳（用于缺失检测） */
-    private volatile long lastTimestamp = 0;
-
-    /** 当前正在处理的K线时间戳（用于判断是否进入新K线周期） */
-    private volatile long currentKlineTime = 0;
-
-    /** 上一根已确认的K线数据（用于触发策略信号） */
-    private volatile Kline lastConfirmedKline = null;
-
-    // ==================== 新增 TA4J 相关字段 ====================
+    // ==================== TA4J 核心數據序列 ====================
     private final BarSeries series15m;
     private BarSeries seriesDaily;
 
-    private ClosePriceIndicator closeDaily;
-    private SMAIndicator sma10Daily;
-    private SMAIndicator sma20Daily;
-    private RSIIndicator rsi14Daily;
-    private ATRIndicator atr14Daily;
-
+    /** 內聚的策略核心（指標快取與風控全部在策略內部實現） */
     private final SwingStrategy strategy;
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
+    // 在 SymbolState 類別中補回 volatile 欄位
+    private volatile long lastTimestamp = 0;
 
     public SymbolState(String symbol) {
         this.symbol = symbol;
         this.series15m = new BaseBarSeriesBuilder()
                 .withName(symbol + "_15m")
-                .withMaxBarCount(110000)
+                .withMaxBarCount(110000) // 防止內存溢出
                 .build();
-        this.strategy = new SwingStrategy(12);   // 默认12天波段
+        this.strategy = new SwingStrategy(12); // 默認12天波段策略
     }
 
-    // ==================== TA4J 方法 ====================
+    // ==================== TA4J 數據流核心方法 ====================
 
-    /** 历史数据批量加载（补偿恢复时调用） */
+    /** 歷史數據批量加載（補償恢復時調用） */
     public void loadHistoricalBars(List<Kline> klines) {
         for (Kline k : klines) {
             if (Boolean.TRUE.equals(k.getIsFinal())) {
-                series15m.addBar(createBar(k));
+                addBarToSeries(k); // 呼叫防禦性添加
             }
         }
-        initializeIndicators();
-        initialized.set(true);
-        log.info("[{}] TA4J 历史数据加载完成，共 {} 根15m K线", symbol, series15m.getBarCount());
+
+        // 歷史數據塞滿後，主動觸發第一次聚合
+        this.seriesDaily = refreshDailySeries();
+        log.info("[{}] TA4J 歷史數據加載完成，共 {} 根15m K線", symbol, series15m.getBarCount());
     }
 
-    /** 实时新增K线（仅最终确认） */
+    /** * 純粹的聚合工具方法
+     */
+    private BarSeries refreshDailySeries() {
+        return new BaseBarSeriesAggregator(
+                // 將 true 改為 false，讓不滿 24 小時的當天數據也能強制聚合出一根日線
+                new DurationBarAggregator(Duration.ofDays(1), false))
+                .aggregate(series15m, symbol + "_daily");
+    }
+
+    /** 即時新增K線（僅最終確認） */
     public void addBar(Kline kline, boolean isFinal) {
         if (!isFinal) return;
 
-        series15m.addBar(createBar(kline));
+        // 獲取添加前的最後一根時間
+        ZonedDateTime lastTimeBefore = series15m.getBarCount() > 0 ? series15m.getLastBar().getEndTime() : null;
 
-        if (initialized.get()) {
-            BarSeries daily = getDailySeries();
-            int endIndex = daily.getEndIndex();
-            strategy.onNewBar(daily, endIndex);
+        if (addBarToSeries(kline)) {
+            ZonedDateTime lastTimeAfter = series15m.getLastBar().getEndTime();
+
+            // 關鍵效能優化：如果新 K線導致日期變更（跨天），或者 seriesDaily 還沒初始化
+            if (seriesDaily == null || lastTimeBefore == null || lastTimeAfter.toLocalDate().isAfter(lastTimeBefore.toLocalDate())) {
+                this.seriesDaily = refreshDailySeries(); // 跨天了，重新聚合
+            } else {
+                // 如果在同一天內，為了讓策略能看到「今天最新的即時收盤價變動」，我們也需要刷新
+                // 註：這裏可以根據效能微調，若追求 $O(1)$，通常會在實戰中改用手動 append 最終價
+                this.seriesDaily = refreshDailySeries();
+            }
+
+            int endIndex = seriesDaily.getEndIndex(); // 這裡絕對不會是 -1 了
+            strategy.onNewBar(seriesDaily, endIndex);
         }
     }
 
-    /** 创建 Bar（适配 ta4j 0.15） */
-    private Bar createBar(Kline k) {
-        ZonedDateTime zonedTime = Instant.ofEpochMilli(k.getOpenTime())
-                .atZone(ZoneId.of("UTC"));
+    /** * 防禦性添加 Bar，防止時間戳重複或時序倒流導致 TA4J 崩潰
+     */
+    private boolean addBarToSeries(Kline k) {
+        // OKX 返回開盤時間，TA4J 需要收盤時間，此處 +15 分鐘對齊時間軸
+        ZonedDateTime zonedEndTime = Instant.ofEpochMilli(k.getOpenTime())
+                .atZone(ZoneId.of("UTC"))
+                .plusMinutes(15);
 
-        return BaseBar.builder()
+        // 關鍵防禦：檢查新數據是否嚴格大於序列最後一根 Bar 的時間
+        if (series15m.getBarCount() > 0) {
+            ZonedDateTime lastEndTime = series15m.getLastBar().getEndTime();
+            if (!zonedEndTime.isAfter(lastEndTime)) {
+                log.debug("[{}] TA4J 攔截重複或過期 K線: 傳入={}, 序列尾部={}", symbol, zonedEndTime, lastEndTime);
+                return false;
+            }
+        }
+
+        Bar newBar = BaseBar.builder()
                 .timePeriod(Duration.ofMinutes(15))
-                .endTime(zonedTime)
+                .endTime(zonedEndTime)
                 .openPrice(DecimalNum.valueOf(k.getOpen()))
                 .highPrice(DecimalNum.valueOf(k.getHigh()))
                 .lowPrice(DecimalNum.valueOf(k.getLow()))
                 .closePrice(DecimalNum.valueOf(k.getClose()))
                 .volume(DecimalNum.valueOf(k.getVolume()))
                 .build();
+
+        series15m.addBar(newBar);
+        return true;
     }
 
-    private void initializeIndicators() {
-        BarSeries daily = getDailySeries();
-        closeDaily = new ClosePriceIndicator(daily);
-        sma10Daily = new SMAIndicator(closeDaily, 10);
-        sma20Daily = new SMAIndicator(closeDaily, 20);
-        rsi14Daily = new RSIIndicator(closeDaily, 14);
-        atr14Daily = new ATRIndicator(daily, 14);
-    }
-
+    /**
+     * 動態 15m 轉 日線（Daily）聚合器
+     */
     public BarSeries getDailySeries() {
         if (seriesDaily == null) {
             seriesDaily = new BaseBarSeriesAggregator(
@@ -120,9 +133,5 @@ public class SymbolState implements Serializable {
                     .aggregate(series15m, symbol + "_daily");
         }
         return seriesDaily;
-    }
-
-    public SwingStrategy getStrategy() {
-        return strategy;
     }
 }

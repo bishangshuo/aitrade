@@ -182,6 +182,24 @@ public class KlineRepository {
     }
 
     /**
+     * 获取一个币种的所有k线数据
+     * @param symbol
+     */
+    public List<Kline> findBySymbol(String symbol) {
+        String sql = String.format("SELECT * FROM %s WHERE symbol = ? ORDER BY open_time ASC", tableName);
+        try {
+            return jdbcTemplate.query(sql,
+                    new Object[]{
+                            symbol
+                    },
+                    (rs, rowNum) -> mapRowToKline(rs));
+        } catch (Exception e) {
+            log.error("查询K线失败: symbol={}", symbol);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * 统计指定symbol的K线总数
      */
     public long count(String symbol) {

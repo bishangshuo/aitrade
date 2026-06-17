@@ -239,18 +239,19 @@ public class OkxWsClient {
         try {
             JsonNode root = mapper.readTree(text);
 
-            // 跳过非数据消息（如订阅确认、pong等）
+            // 跳過非數據消息（如訂閱確認、pong等）
             if (!root.has("data") || root.get("data").size() == 0) {
                 return;
             }
 
-            // ★ 关键改动：从 arg.instId 提取交易对
+            // 從 arg.instId 提取交易對
             String symbol = null;
             if (root.has("arg") && root.get("arg").has("instId")) {
                 symbol = root.get("arg").get("instId").asText();
             }
+
             if (symbol == null || !symbolManager.isActive(symbol)) {
-                log.debug("忽略非活跃交易对消息: {}", symbol);
+                log.debug("忽略非活躍交易對消息: {}", symbol);
                 return;
             }
 
@@ -259,24 +260,9 @@ public class OkxWsClient {
             long currentTimestamp = arr.get(0).asLong();
             String confirm = arr.get(8).asText();
 
-            // 1. 时间戳连续性检测（检测数据缺失）
-            if (state.getLastTimestamp() > 0) {
-                long diff = currentTimestamp - state.getLastTimestamp();
-                if (diff > klineTime + 1000) {
-                    long missingCount = diff / klineTime - 1;
-                    log.warn("[{}] 检测到 {} 条K线缺失！从 {} 到 {}",
-                            symbol, missingCount, state.getLastTimestamp(), currentTimestamp);
-                    final long startTime = state.getLastTimestamp() + klineTime;
-                    final String finalSymbol = symbol;
-                    CompletableFuture.runAsync(() ->
-                            compensationTask.compensateRange(finalSymbol, startTime, null));
-                }
-            }
-            state.setLastTimestamp(currentTimestamp);
-
-            // 2. 构建 Kline 对象
+            // 構建 Kline 對象
             Kline k = new Kline();
-            k.setSymbol(symbol);  // ★ 使用消息中的交易对，不再硬编码
+            k.setSymbol(symbol);
             k.setOpenTime(arr.get(0).asLong());
             k.setOpen(new BigDecimal(arr.get(1).asText()));
             k.setHigh(new BigDecimal(arr.get(2).asText()));
@@ -287,24 +273,70 @@ public class OkxWsClient {
                 k.setQuoteVolume(new BigDecimal(arr.get(6).asText()));
             }
 
-            // 3. 判断是否最终确认
+            // 判斷是否最終確認
             boolean isFinal = "1".equals(confirm);
             k.setIsFinal(isFinal);
 
-            // 4. 更新 Redis 中的最后接收时间戳
-            // 只有isFinal持久化缓存
-            if(isFinal) {
+            // ==================== 核心風控與丟包補償邏輯 ====================
+            // 僅在 K線真正完結（isFinal）時檢測時間斷層，排除高頻未完結數據的干擾
+            if (isFinal) {
+                if (state.getLastTimestamp() > 0) {
+                    long diff = currentTimestamp - state.getLastTimestamp();
+
+                    // 如果時間差大於標準的 1 個 K線週期（例如 15 分鐘），觸發斷層補償
+                    if (diff > klineTime + 1000) {
+                        long missingCount = diff / klineTime - 1;
+                        log.warn("[{}] 執行中檢測到 {} 條K線缺失！時間斷層：{} -> {}",
+                                symbol, missingCount, state.getLastTimestamp(), currentTimestamp);
+
+                        final long startTime = state.getLastTimestamp() + klineTime;
+                        final String finalSymbol = symbol;
+
+                        // 2. 啟動非同步區間補償，拉取 HTTP 歷史數據
+                        CompletableFuture.runAsync(() ->
+                                compensationTask.compensateRange(finalSymbol, startTime, new RecoveryHandler() {
+                                    @Override
+                                    public void onComplete(String sym) {
+                                        log.info("[{}] 區間丟包補償數據已成功落庫，開始重新對齊並驅動策略大腦...", sym);
+
+                                        // 3. 補償落庫完成後的動態對齊：
+                                        // 重新從資料庫打包拉取最完整的連續歷史 K線，正序餵飽並重新激活 TA4J
+                                        compensationTask.fullRecoveryOnStartup(sym, null);
+                                    }
+
+                                    @Override
+                                    public void onError(String sym, Throwable e) {
+                                        log.error("[{}] 執行中丟包補償失敗，策略大腦持續鎖定，請人工介入檢查", sym, e);
+                                    }
+
+                                    @Override
+                                    public void onProgress(String symbol, int progress) {
+
+                                    }
+                                })
+                        );
+                    }
+                }
+
+                // 只有完結的 K線才更新記憶體中的最後時間戳基準
+                state.setLastTimestamp(currentTimestamp);
+
+                // 更新 Redis 中的最後接收時間戳（僅完結數據）
                 redisTemplate.opsForValue().set(
                         "ws:lastTimestamp:" + symbol,
                         String.valueOf(currentTimestamp)
                 );
             }
 
-            // 5. 处理K线数据
+            // ==================== 數據流向與大腦驅動 ====================
+            // 呼叫 service 處理數據：
+            // - 當 isFinal=true 且大腦被鎖定時，service 依然會把數據穩穩地寫入 TimescaleDB
+            // - 當 initialized=true 時，service 內部會進一步呼叫 state.addBar 驅動策略計算
             klineService.process(k, isFinal);
 
             log.debug("[{}] 收到K线数据: time={}, close={}, confirm={}",
-                    symbol, DateUtils.formatDate(DateUtils.fromTimestamp(currentTimestamp/1000)), k.getClose(), confirm);
+                    symbol, DateUtils.formatDate(DateUtils.fromTimestamp(currentTimestamp / 1000)), k.getClose(), confirm);
+
         } catch (Exception e) {
             log.error("解析WebSocket消息失败: {}", text, e);
         }

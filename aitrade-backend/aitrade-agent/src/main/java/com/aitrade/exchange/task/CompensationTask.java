@@ -1,6 +1,7 @@
 package com.aitrade.exchange.task;
 
 import com.aitrade.exchange.component.SymbolManager;
+import com.aitrade.exchange.component.SymbolState;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.repository.KlineRepository;
@@ -44,8 +45,6 @@ public class CompensationTask {
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private KlineServiceImpl klineService;
-    @Autowired
-    private SymbolManager symbolManager;
 
     private final ObjectMapper mapper = new ObjectMapper();
     private static final int MAX_BATCH_SIZE = 300;
@@ -153,6 +152,14 @@ public class CompensationTask {
      */
     public void fullRecoveryOnStartup(String symbol, RecoveryHandler handler) {
         try {
+            // 1 首先从数据库加载所有k线数据到state
+            log.info("[{}] ===== 开始加载数据到Ta4j 系列 ......", symbol);
+            //开始时间
+            Long startTime = System.currentTimeMillis();
+            klineService.loadKlinesToState(symbol);
+            Long endTime = System.currentTimeMillis();
+            log.info("[{}] ===== 加载数据到Ta4j 系列 完成, 耗时 {} 秒", symbol, (endTime - startTime) / 1000);
+
             log.info("[{}] ===== 开始启动数据恢复 =====", symbol);
 
             Long lastDbTime = repo.getLastOpenTime(symbol);

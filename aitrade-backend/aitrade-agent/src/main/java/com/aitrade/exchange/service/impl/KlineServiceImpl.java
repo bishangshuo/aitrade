@@ -110,12 +110,16 @@ public class KlineServiceImpl implements IKlineService {
                     symbol, k.getOpenTime(), k.getClose(), k.getOpen(),
                     k.getHigh(), k.getLow(), k.getVolume());
 
-            SymbolState state = getOrCreateState(symbol);
-            state.addBar(k, true);                    // 更新 TA4J
-
             // 触发策略计算
             fireStrategySignal(k);
         }
+    }
+
+    @Override
+    public void loadKlinesToState(String symbol) {
+        List<Kline> klinesInDb = repo.findBySymbol(symbol);
+        SymbolState state = getOrCreateState(symbol);
+        state.loadHistoricalBars(klinesInDb);
     }
 
     private SymbolState getOrCreateState(String symbol) {
