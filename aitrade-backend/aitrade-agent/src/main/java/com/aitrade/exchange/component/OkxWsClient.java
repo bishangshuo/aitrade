@@ -332,7 +332,7 @@ public class OkxWsClient {
             // 呼叫 service 處理數據：
             // - 當 isFinal=true 且大腦被鎖定時，service 依然會把數據穩穩地寫入 TimescaleDB
             // - 當 initialized=true 時，service 內部會進一步呼叫 state.addBar 驅動策略計算
-            klineService.process(k, isFinal);
+            klineService.processWebsocketKline(k, isFinal);
 
             log.debug("[{}] 收到K线数据: time={}, close={}, confirm={}",
                     symbol, DateUtils.formatDate(DateUtils.fromTimestamp(currentTimestamp / 1000)), k.getClose(), confirm);

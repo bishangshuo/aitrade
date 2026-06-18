@@ -1,7 +1,5 @@
 package com.aitrade.exchange.task;
 
-import com.aitrade.exchange.component.SymbolManager;
-import com.aitrade.exchange.component.SymbolState;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.repository.KlineRepository;
@@ -156,7 +154,7 @@ public class CompensationTask {
             log.info("[{}] ===== 开始加载数据到Ta4j 系列 ......", symbol);
             //开始时间
             Long startTime = System.currentTimeMillis();
-            klineService.loadKlinesToState(symbol);
+            klineService.loadKlinesToStateFromDb(symbol);
             Long endTime = System.currentTimeMillis();
             log.info("[{}] ===== 加载数据到Ta4j 系列 完成, 耗时 {} 秒", symbol, (endTime - startTime) / 1000);
 

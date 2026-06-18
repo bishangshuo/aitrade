@@ -50,7 +50,7 @@ public class SymbolState implements Serializable {
     public void loadHistoricalBars(List<Kline> klines) {
         for (Kline k : klines) {
             if (Boolean.TRUE.equals(k.getIsFinal())) {
-                addBarToSeries(k); // 呼叫防禦性添加
+                addBarToSeries(k, false); // 呼叫防禦性添加
             }
         }
 
@@ -75,7 +75,7 @@ public class SymbolState implements Serializable {
         // 獲取添加前的最後一根時間
         ZonedDateTime lastTimeBefore = series15m.getBarCount() > 0 ? series15m.getLastBar().getEndTime() : null;
 
-        if (addBarToSeries(kline)) {
+        if (addBarToSeries(kline, true)) {
             ZonedDateTime lastTimeAfter = series15m.getLastBar().getEndTime();
 
             // 關鍵效能優化：如果新 K線導致日期變更（跨天），或者 seriesDaily 還沒初始化
@@ -93,12 +93,17 @@ public class SymbolState implements Serializable {
     }
 
     /** * 防禦性添加 Bar，防止時間戳重複或時序倒流導致 TA4J 崩潰
+     * 如果k线数据来自http接口请求，那么k线的openTime是收市价形成时刻的时间，比如 9:30:00 实则是9:15:00的k线，这是zonedEndTime不用加15分钟
+     * 如果k线数据来自websocket，那么k线的openTime是K线开市时间，比如 9:15:00 那么zonedEndTime等于这个时间加15分钟
      */
-    private boolean addBarToSeries(Kline k) {
+    private boolean addBarToSeries(Kline k, boolean fromWebsocket) {
         // OKX 返回開盤時間，TA4J 需要收盤時間，此處 +15 分鐘對齊時間軸
         ZonedDateTime zonedEndTime = Instant.ofEpochMilli(k.getOpenTime())
-                .atZone(ZoneId.of("UTC"))
-                .plusMinutes(15);
+                .atZone(ZoneId.of("UTC"));
+
+        if(fromWebsocket) {
+            zonedEndTime = zonedEndTime.plusMinutes(15);
+        }
 
         // 關鍵防禦：檢查新數據是否嚴格大於序列最後一根 Bar 的時間
         if (series15m.getBarCount() > 0) {

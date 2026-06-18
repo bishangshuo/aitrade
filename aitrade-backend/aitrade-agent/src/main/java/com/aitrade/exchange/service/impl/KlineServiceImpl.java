@@ -46,77 +46,76 @@ public class KlineServiceImpl implements IKlineService {
     private final Map<String, SymbolState> symbolStates = new ConcurrentHashMap<>();
 
     @Override
-    public void process(Kline k, boolean isFinal) {
+    public void processWebsocketKline(Kline k, boolean isFinal) {
         String symbol = k.getSymbol();
+        long openTime = k.getOpenTime();
 
-        // ========== 第一部分：实时更新 - 每次推送都执行 ==========
+        // ========== 第一部分：即時流處理（每次推送都執行） ==========
 
-        // 2. 更新Redis缓存（覆盖旧值，保留最新数据）
-        String cacheKey = "kline:live:" + symbol + ":" + k.getOpenTime();
+        // 1. 更新 Redis 動態行情報告（保留 5 分鐘快取，提供前端或即時看板插針數據）
+        String cacheKey = "kline:live:" + symbol + ":" + openTime;
         redisTemplate.opsForValue().set(
                 cacheKey,
                 String.format("%d,%s,%s,%s,%s,%s,%s",
-                        k.getOpenTime(), k.getOpen(), k.getHigh(),
+                        openTime, k.getOpen(), k.getHigh(),
                         k.getLow(), k.getClose(), k.getVolume(), k.getQuoteVolume()),
                 5, TimeUnit.MINUTES
         );
 
-        // 3. 检测是否进入新K线周期（per-symbol）
-        long currentKlineTime = currentKlineTimeMap.getOrDefault(symbol, 0L);
-        if (k.getOpenTime() > currentKlineTime) {
-            log.debug("[{}] 进入新K线周期: {}", symbol, k.getOpenTime());
-            // 如果上一根K线已确认，触发策略信号
-            Kline lastConfirmed = lastConfirmedKlineMap.get(symbol);
-            if (lastConfirmed != null) {
-                fireStrategySignal(lastConfirmed);
-            }
-            currentKlineTimeMap.put(symbol, k.getOpenTime());
-        }
-
-        // 4. 更新最新K线缓存（用于快速获取当前价格）
+        // 2. 更新最新最新收盤價（供高頻秒級風控引擎動態比對止損線，無需過 TA4J）
         redisTemplate.opsForValue().set(
                 "kline:current:" + symbol,
                 String.valueOf(k.getClose()),
                 1, TimeUnit.MINUTES
         );
 
-        // ========== 第二部分：最终确认处理 - 仅confirmed=1时执行 ==========
+        // 🚀【核心修正】移除原有的「if (k.getOpenTime() > currentKlineTime)」被動驅動邏輯
+        // 讓第一部分回歸純粹的「即時流流數據清洗與快取維護」職責
+
+        // ========== 第二部分：完結邊界處理（僅當 isFinal = true 時執行） ==========
         if (isFinal) {
-            // 5. 对最终确认数据做去重
-            String confirmKey = symbol + ":" + k.getOpenTime() + ":confirmed";
+
+            // 3. 完結數據精密去重防線（防止 WS 斷線重連推播重複的完結數據包）
+            String confirmKey = symbol + ":" + openTime + ":confirmed";
             if (!confirmedCandles.add(confirmKey)) {
-                log.debug("[{}] 已确认的K线已处理过，跳过: time={}", symbol, k.getOpenTime());
+                log.debug("[{}] 該週期的收盤確認訊號已處理過，攔截重複推播: time={}", symbol, openTime);
                 return;
             }
 
-            // 限制去重缓存大小，防止内存溢出
-            if (confirmedCandles.size() > 10000) {
+            // 記憶體輕量化維護：防止 7x24 小時 OOM。若超過閾值，採用更安全的清理策略
+            if (confirmedCandles.size() > 5000) {
+                // 實際生產中推薦使用 Guava Cache TTL，若用普通 Set 清理，建議留有緩衝，此處做簡單安全清理
                 confirmedCandles.clear();
+                confirmedCandles.add(confirmKey); // 把當前這個撈回來，防止清空瞬間被鑽空子
             }
 
-            // 6. 写入数据库
+            // 4. 數據落庫 TimescaleDB（保證底層歷史時序數據的絕對完整性）
             repo.upsert(k);
 
-            // 7. 记录最后一次确认的K线时间戳
+            // 5. 更新 Redis 中的最後落庫時間戳基準（供斷線重連時的 HTTP 補償任務比對）
             redisTemplate.opsForValue().set(
                     "db:lastTimestamp:" + symbol,
-                    String.valueOf(k.getOpenTime())
+                    String.valueOf(openTime)
             );
 
-            // 8. 保存为上一根已确认K线（per-symbol）
+            // 6. 更新記憶體快取基準
             lastConfirmedKlineMap.put(symbol, k);
+            currentKlineTimeMap.put(symbol, openTime);
 
-            log.info("[{}] 最终确认K线写入数据库: time={}, close={}, open={}, high={}, low={}, volume={}",
-                    symbol, k.getOpenTime(), k.getClose(), k.getOpen(),
-                    k.getHigh(), k.getLow(), k.getVolume());
+            log.info("[{}] ─── K線正式收盤 ─── 寫入數據庫: time={}, close={}, volume={}",
+                    symbol, openTime, k.getClose(), k.getVolume());
 
-            // 触发策略计算
+            // 7. 【唯一驅動入口】在完結的瞬間，立刻點火驅動策略大腦（TA4J 餵入、指標計算、開平倉訊號）
             fireStrategySignal(k);
         }
     }
 
+    /**
+     * 从数据库加载历史K线数据到Ta4j数据结构
+     * @param symbol
+     */
     @Override
-    public void loadKlinesToState(String symbol) {
+    public void loadKlinesToStateFromDb(String symbol) {
         List<Kline> klinesInDb = repo.findBySymbol(symbol);
         SymbolState state = getOrCreateState(symbol);
         state.loadHistoricalBars(klinesInDb);
