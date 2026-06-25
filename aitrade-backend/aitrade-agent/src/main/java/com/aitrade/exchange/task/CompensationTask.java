@@ -1,6 +1,7 @@
 package com.aitrade.exchange.task;
 
 import com.aitrade.exchange.domain.Kline;
+import com.aitrade.exchange.domain.KlineSettings;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.repository.KlineRepository;
 import com.aitrade.exchange.service.impl.KlineServiceImpl;
@@ -43,20 +44,11 @@ public class CompensationTask {
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private KlineServiceImpl klineService;
+    @Autowired
+    private KlineSettings klineSettings;
 
     private final ObjectMapper mapper = new ObjectMapper();
     private static final int MAX_BATCH_SIZE = 300;
-
-    @Value("${crypto.time-length}")
-    private long timeLength;
-
-    @Value("${crypto.kline}")
-    private String klineInterval;
-
-    @Value("${crypto.kline-time}")
-    private long klineTime;
-
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * 重连成功后触发补偿（per-symbol）
@@ -67,10 +59,12 @@ public class CompensationTask {
             if (lastTimeStr == null) return;
             long lastTime = Long.parseLong(lastTimeStr);
             long now = System.currentTimeMillis();
-            long diffMinutes = (now - lastTime) / klineTime;
+            long diffMinutes = (now - lastTime) / klineSettings.getKlineTime();
             if (diffMinutes > 15) {
                 log.info("[{}] 重连后检测到 {} 分钟数据缺失，开始补偿...", symbol, diffMinutes);
                 compensateRange(symbol, lastTime, handler);
+            } else {
+                handler.onComplete(symbol);
             }
         } catch (Exception e) {
             log.error("[{}] 重连补偿失败", symbol, e);
@@ -85,16 +79,16 @@ public class CompensationTask {
             log.info("[{}] 开始精准补偿：从 {} 开始", symbol, new Timestamp(startTime));
 
             int fetchSize = MAX_BATCH_SIZE;
-            long afterTime = startTime + fetchSize * klineTime;
+            long afterTime = startTime + fetchSize * klineSettings.getKlineTime();
             long now = System.currentTimeMillis();
             if (now < afterTime) {
                 afterTime = now;
-                fetchSize = (int) ((afterTime - startTime) / klineTime);
+                fetchSize = (int) ((afterTime - startTime) / klineSettings.getKlineTime());
             }
 
             String url = String.format(
                     "https://www.okx.com/api/v5/market/history-candles?instId=%s&bar=%s&limit=%d&after=%d",
-                    symbol, klineInterval,  fetchSize, afterTime
+                    symbol, klineSettings.getKlineInterval(),  fetchSize, afterTime
             );
 
             List<Kline> klines = fetchKlinesFromHttp(url, symbol);
@@ -102,9 +96,9 @@ public class CompensationTask {
                 log.warn("[{}] 未获取到任何K线数据", symbol);
 
                 //有可能币种是后面才上的，前面没有数据，则需要移动开始时间到下一个时间点接续
-                long nextStartTime = startTime + klineTime * fetchSize;
-                long nextStartTime15 = nextStartTime / klineTime;
-                long now15 = now / klineTime;
+                long nextStartTime = startTime + klineSettings.getKlineTime() * fetchSize;
+                long nextStartTime15 = nextStartTime / klineSettings.getKlineTime();
+                long now15 = now / klineSettings.getKlineTime();
 
                 if(nextStartTime15 < now15) {
                     compensateRange(symbol, nextStartTime, handler);
@@ -170,10 +164,10 @@ public class CompensationTask {
             long now = System.currentTimeMillis();
 
             if (recoveryStart == 0) {
-                recoveryStart = now - timeLength;
+                recoveryStart = now - klineSettings.getTimeLength();
             }
 
-            if (now - recoveryStart > klineTime) {
+            if (now - recoveryStart > klineSettings.getKlineTime()) {
                 log.info("[{}] 需要恢复从 {} 到现在的数据", symbol, new Timestamp(recoveryStart));
                 compensateRange(symbol, recoveryStart, handler);
             } else {

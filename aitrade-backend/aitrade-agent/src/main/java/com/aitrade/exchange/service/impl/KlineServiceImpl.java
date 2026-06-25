@@ -1,7 +1,10 @@
 package com.aitrade.exchange.service.impl;
 
+import com.aitrade.exchange.component.StatePool;
 import com.aitrade.exchange.component.SymbolState;
 import com.aitrade.exchange.domain.Kline;
+import com.aitrade.exchange.domain.KlineSettings;
+import com.aitrade.exchange.message.KlineMessageProducer;
 import com.aitrade.exchange.repository.KlineRepository;
 import com.aitrade.exchange.service.IKlineService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +36,14 @@ public class KlineServiceImpl implements IKlineService {
     private KlineRepository repo;
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private KlineSettings klineSettings;
+
+    @Autowired
+    private KlineMessageProducer klineMessageProducer;
+
+    @Autowired
+    private StatePool statePool;
 
     // 只对已确认的K线做去重，防止重复写入数据库
     private final Set<String> confirmedCandles = ConcurrentHashMap.newKeySet();
@@ -43,7 +54,7 @@ public class KlineServiceImpl implements IKlineService {
     /** 每个交易对上一根已确认的K线数据 */
     private final ConcurrentHashMap<String, Kline> lastConfirmedKlineMap = new ConcurrentHashMap<>();
 
-    private final Map<String, SymbolState> symbolStates = new ConcurrentHashMap<>();
+    //private final Map<String, SymbolState> symbolStates = new ConcurrentHashMap<>();
 
     @Override
     public void processWebsocketKline(Kline k, boolean isFinal) {
@@ -117,36 +128,40 @@ public class KlineServiceImpl implements IKlineService {
     @Override
     public void loadKlinesToStateFromDb(String symbol) {
         List<Kline> klinesInDb = repo.findBySymbol(symbol);
-        SymbolState state = getOrCreateState(symbol);
-        state.loadHistoricalBars(klinesInDb);
+//        SymbolState state = getOrCreateState(symbol);
+//        state.loadHistoricalBars(klinesInDb);
+        statePool.loadHistoricalBars(symbol, klinesInDb);
     }
 
-    private SymbolState getOrCreateState(String symbol) {
-        return symbolStates.computeIfAbsent(symbol, s -> {
-            SymbolState newState = new SymbolState(s);   // 使用你修改后的 SymbolState
-            // 可选：在这里预加载最近的历史数据加速初始化
-            return newState;
-        });
-    }
+//    private SymbolState getOrCreateState(String symbol) {
+//        return symbolStates.computeIfAbsent(symbol, s -> {
+//            SymbolState newState = new SymbolState(s, klineSettings);   // 使用你修改后的 SymbolState
+//            // 可选：在这里预加载最近的历史数据加速初始化
+//            return newState;
+//        });
+//    }
 
     /**
      * 触发策略信号（当一根K线确认结束时调用）
      */
     private void fireStrategySignal(Kline k) {
-        String symbol = k.getSymbol();
+//        String symbol = k.getSymbol();
 
-        // 获取 SymbolState
-        SymbolState state = getOrCreateState(symbol);   // 使用你之前添加的 getOrCreateState 方法
+//        // 获取 SymbolState
+//        SymbolState state = getOrCreateState(symbol);   // 使用你之前添加的 getOrCreateState 方法
+//        if (state == null) {
+//            log.warn("[{}] SymbolState 未初始化，跳过策略计算", symbol);
+//            return;
+//        }
+//        // 更新 TA4J 数据并计算策略信号
+//
+//        state.addBar(k, true);
+//        statePool.addBar(symbol, k, true);
 
-        if (state == null) {
-            log.warn("[{}] SymbolState 未初始化，跳过策略计算", symbol);
-            return;
-        }
+        // 这里改为消息队列模式，发送消息到state中。解耦websocket与策略的计算
+        klineMessageProducer.sendKlineMessage(k);
 
-        // 更新 TA4J 数据并计算策略信号
-        state.addBar(k, true);
-
-        log.debug("[{}] 策略信号计算完成 - close={}", symbol, k.getClose());
+        //log.debug("[{}] 策略信号计算完成 - close={}", symbol, k.getClose());
     }
 
 
@@ -157,10 +172,10 @@ public class KlineServiceImpl implements IKlineService {
         if (klines.isEmpty()) return;
 
         String symbol = klines.get(0).getSymbol();
-        SymbolState state = getOrCreateState(symbol);
-
-        // 批量加载到 TA4J
-        state.loadHistoricalBars(klines);
+//        SymbolState state = getOrCreateState(symbol);
+//        // 批量加载到 TA4J
+//        state.loadHistoricalBars(klines);
+        statePool.loadHistoricalBars(symbol, klines);
 
         for (Kline k : klines) {
             k.setIsFinal(true);

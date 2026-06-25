@@ -3,6 +3,7 @@ package com.aitrade.exchange.repository;
 
 import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.domain.Kline;
+import com.aitrade.exchange.domain.KlineSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +34,9 @@ public class KlineRepository {
     @Autowired
     public KlineRepository(
             @Qualifier("timescaleJdbcTemplate") JdbcTemplate jdbcTemplate,
-            @Value("${crypto.kline}") String klineInterval
+            KlineSettings klineSettings
     ) {
-        this.tableName = String.format("kline_%s", klineInterval);
+        this.tableName = String.format("kline_%s", klineSettings.getKlineInterval());
         this.jdbcTemplate = jdbcTemplate;
     }
 

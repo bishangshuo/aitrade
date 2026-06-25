@@ -1,5 +1,6 @@
 package com.aitrade.exchange.component;
 
+import com.aitrade.exchange.domain.KlineSettings;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseTradingRecord;
 import org.ta4j.core.Position;
@@ -13,11 +14,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SwingStrategy {
 
-    private final int holdDays;
+    //波段长：12日
+    private final KlineSettings klineSettings;
     private final TradingRecord tradingRecord = new BaseTradingRecord();
 
-    public SwingStrategy(int holdDays) {
-        this.holdDays = holdDays;
+    public SwingStrategy(KlineSettings _klineSettings) {
+        this.klineSettings = _klineSettings;
     }
 
     public void onNewBar(BarSeries dailySeries, int currentIndex) {
@@ -56,7 +58,7 @@ public class SwingStrategy {
 
             sellSignal = sma10Val.isLessThan(sma20Val) ||
                     rsiVal.isGreaterThan(num75) ||
-                    holdDaysActual >= holdDays + 3;
+                    holdDaysActual >= this.klineSettings.getWaveLength() + 3;
         }
 
         if (buySignal) {
@@ -71,4 +73,35 @@ public class SwingStrategy {
             tradingRecord.exit(currentIndex, price, num1);
         }
     }
+
+    /**
+     * SMA计算
+     */
+    private void calcSMA(ClosePriceIndicator close) {
+
+    }
+
+    /**
+     * EMA计算
+     */
+
+    /**
+     * MACD计算
+     */
+
+    /**
+     * RSI计算
+     */
+
+    /**
+     * VWAP计算
+     */
+
+    /**
+     * OBV计算
+     */
+
+    /**
+     * BOLL计算
+     */
 }

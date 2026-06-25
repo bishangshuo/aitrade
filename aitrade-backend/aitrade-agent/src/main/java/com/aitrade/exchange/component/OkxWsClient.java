@@ -2,6 +2,7 @@ package com.aitrade.exchange.component;
 
 import com.aitrade.common.utils.DateUtils;
 import com.aitrade.exchange.domain.Kline;
+import com.aitrade.exchange.domain.KlineSettings;
 import com.aitrade.exchange.event.SymbolChangeEvent;
 import com.aitrade.exchange.handler.RecoveryHandler;
 import com.aitrade.exchange.handler.WsConnectionOpenHandler;
@@ -19,7 +20,6 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -53,17 +53,8 @@ public class OkxWsClient {
     @Autowired
     private SymbolManager symbolManager;
 
-    @Value("${crypto.time-length}")
-    private long timeLength;
-
-    @Value("${crypto.kline}")
-    private String klineInterval;
-
-    @Value("${crypto.candle-name}")
-    private String candleName;
-
-    @Value("${crypto.kline-time}")
-    private long klineTime;
+    @Autowired
+    private KlineSettings klineSettings;
 
     @Resource(name = "threadPoolTaskExecutor")
     private Executor taskExecutor;
@@ -79,6 +70,10 @@ public class OkxWsClient {
     /** 每个交易对的运行时状态 */
     private final ConcurrentHashMap<String, SymbolState> symbolStateMap = new ConcurrentHashMap<>();
 
+    /**
+     * 恢复处理回调
+     * 恢复完成后才开始订阅
+     * */
     private final RecoveryHandler recoveryHandler = new RecoveryHandler() {
         @Override
         public void onComplete(String symbol) {
@@ -146,7 +141,10 @@ public class OkxWsClient {
      * 获取或创建交易对状态
      */
     private SymbolState getOrCreateSymbolState(String symbol) {
-        return symbolStateMap.computeIfAbsent(symbol, SymbolState::new);
+        return symbolStateMap.computeIfAbsent(symbol, s -> {
+            SymbolState newState = new SymbolState(s, klineSettings);
+            return newState;
+        });
     }
 
     private void connect(WsConnectionOpenHandler onOpenHandler) {
@@ -207,7 +205,7 @@ public class OkxWsClient {
         if (webSocket != null) {
             String subscribeMsg = String.format(
                     "{\"op\":\"subscribe\",\"args\":[{\"channel\":\"%s\",\"instId\":\"%s\"}]}",
-                    candleName, symbol);
+                    klineSettings.getCandleName(), symbol);
             webSocket.send(subscribeMsg);
             log.info("发送订阅请求: {}", symbol);
         }
@@ -220,7 +218,7 @@ public class OkxWsClient {
         if (webSocket != null) {
             String unsubMsg = String.format(
                     "{\"op\":\"unsubscribe\",\"args\":[{\"channel\":\"%s\",\"instId\":\"%s\"}]}",
-                    candleName, symbol);
+                    klineSettings.getCandleName(), symbol);
             webSocket.send(unsubMsg);
             log.info("发送取消订阅请求: {}", symbol);
         }
@@ -284,12 +282,20 @@ public class OkxWsClient {
                     long diff = currentTimestamp - state.getLastTimestamp();
 
                     // 如果時間差大於標準的 1 個 K線週期（例如 15 分鐘），觸發斷層補償
-                    if (diff > klineTime + 1000) {
-                        long missingCount = diff / klineTime - 1;
+
+                    /**
+                     * 这种情况发生在：websocket断开连接很长一段时间，当websocket重连后，可能错过了很多K线数据的处理
+                     * 当在这里，当websocket重新连接成功之后，已经调用的compensationTask.compensateOnReconnect方法进行补偿，
+                     * 又由于进行补偿所花费的时间比较长，等补偿完成后，仍然又错过了几根k线数据（特别是5分钟、1分钟k线），那么最好的办法
+                     * 是在每次处理k线websocket的消息时，再次进行一次补偿调用，从数学上来说，这种补偿情况的发生是无休止的，但现实中发生的几率
+                     * 接近于0
+                     */
+                    if (diff > klineSettings.getKlineTime() + 1000) {
+                        long missingCount = diff / klineSettings.getKlineTime() - 1;
                         log.warn("[{}] 執行中檢測到 {} 條K線缺失！時間斷層：{} -> {}",
                                 symbol, missingCount, state.getLastTimestamp(), currentTimestamp);
 
-                        final long startTime = state.getLastTimestamp() + klineTime;
+                        final long startTime = state.getLastTimestamp() + klineSettings.getKlineTime();
                         final String finalSymbol = symbol;
 
                         // 2. 啟動非同步區間補償，拉取 HTTP 歷史數據
