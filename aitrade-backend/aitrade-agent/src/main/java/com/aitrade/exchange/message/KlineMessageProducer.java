@@ -1,6 +1,6 @@
 package com.aitrade.exchange.message;
 
-import com.aitrade.exchange.config.RabbitMQConfig;
+import com.aitrade.exchange.config.RMCurrencyKlineConfig;
 import com.aitrade.exchange.domain.Kline;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +14,8 @@ public class KlineMessageProducer {
     public void sendKlineMessage(Kline kline) {
         // 参数分别为：交换机名称、路由键、消息内容
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY,
+                RMCurrencyKlineConfig.EXCHANGE_NAME,
+                RMCurrencyKlineConfig.ROUTING_KEY,
                 kline
         );
         System.out.println("kline消息发送成功: " + kline);

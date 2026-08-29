@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RabbitMQConfig {
+public class RMCurrencyKlineConfig {
     public static final String EXCHANGE_NAME = "kline.message.exchange";
     public static final String QUEUE_NAME = "kline.message.queue";
     public static final String ROUTING_KEY = "kline.message.routingKey";

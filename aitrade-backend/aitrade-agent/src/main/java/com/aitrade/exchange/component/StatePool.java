@@ -1,6 +1,6 @@
 package com.aitrade.exchange.component;
 
-import com.aitrade.exchange.config.RabbitMQConfig;
+import com.aitrade.exchange.config.RMCurrencyKlineConfig;
 import com.aitrade.exchange.domain.Kline;
 import com.aitrade.exchange.domain.KlineSettings;
 import jakarta.annotation.PostConstruct;
@@ -73,7 +73,7 @@ public class StatePool {
         state.addBar(kline, true);
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
+    @RabbitListener(queues = RMCurrencyKlineConfig.QUEUE_NAME)
     public void onKlineMessage(Kline kline) {
         this.taskExecutor.execute(() -> {
             addBar(kline.getSymbol(), kline, true);

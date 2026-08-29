@@ -70,7 +70,7 @@ public class SwingStrategy {
             long entryIndex = currentPosition.getEntry().getIndex();
             log.info("【卖出信号】 {} | 价格: {} | 持仓: {}根日线 | 理由: {}",
                     dailySeries.getName(), price, (currentIndex - entryIndex), reason);
-            tradingRecord.exit(currentIndex, price, num1);
+            tradingRecord.exit(currentIndex, price, num1);  
         }
     }
 

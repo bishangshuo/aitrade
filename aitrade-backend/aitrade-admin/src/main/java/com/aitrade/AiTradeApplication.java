@@ -1,5 +1,6 @@
 package com.aitrade;
 
+import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })
 @EnableScheduling
+@EnableRabbit
 public class AiTradeApplication
 {
     static {

@@ -89,3 +89,13 @@ RuoYi-App/.hbuilderx/*
 
 RuoYi-App/package-lock.json
 RuoYi-App/yarn.lock
+
+spider/AStockDataGrabber/.vs
+spider/AStockDataGrabber/packages
+spider/AStockDataGrabber/x64
+spider/AStockDataGrabber/AStockDataGrabber/x64
+
+spider/AStockNewsSpider/.vs
+spider/AStockNewsSpider/packages
+spider/AStockNewsSpider/x64
+spider/AStockNewsSpider/AStockNewsSpider/x64
