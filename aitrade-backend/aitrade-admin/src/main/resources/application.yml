@@ -145,3 +145,12 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+aj:
+  captcha:
+    cache-type: redis          # 缓存类型，推荐使用 redis
+    type: blockPuzzle          # 验证码类型：blockPuzzle(滑块) 或 clickWord(文字点选)
+    water-mark: aitrade.minerfrog      # 图片右下角水印文字
+    slip-offset: 5             # 允许的拼图滑动误差偏移量(像素)
+    aes-status: true           # 是否启用 AES 加密传输
+    interference-options: 2    # 图片干扰项 (0:无, 1:轻度, 2:强干扰)

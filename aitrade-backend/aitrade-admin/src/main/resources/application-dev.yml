@@ -97,3 +97,11 @@ kline:
     kline-interval: 15m
     candle-name: candle15m
     wave-length: 12
+
+# TickFlow配置
+tickflow:
+    service:
+        url: https://free-api.tickflow.org
+        api-key: tk_04247d60a5ac47e78ce933b1e6ec1e6a
+        delay: 4000
+    filter: US,HK
