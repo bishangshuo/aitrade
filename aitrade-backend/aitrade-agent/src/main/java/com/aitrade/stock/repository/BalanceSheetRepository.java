@@ -1,7 +1,6 @@
 package com.aitrade.stock.repository;
 
 import com.aitrade.stock.domain.StockBalanceSheet;
-import com.aitrade.tickflow.domain.TfStock;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -14,7 +13,26 @@ import java.util.List;
 @Repository
 public class BalanceSheetRepository {
 
-    private static final String COLUMNS = "SECUCODE, SECURITY_CODE, SECURITY_NAME_ABBR, ORG_CODE, ORG_TYPE, REPORT_DATE, REPORT_TYPE, REPORT_DATE_NAME, SECURITY_TYPE_CODE, NOTICE_DATE, UPDATE_DATE, CURRENCY, MONETARYFUNDS, NOTE_ACCOUNTS_RECE, NOTE_RECE, ACCOUNTS_RECE, PREPAYMENT, OTHER_RECE, INVENTORY, OTHER_CURRENT_ASSET, TOTAL_CURRENT_ASSETS, LONG_EQUITY_INVEST, OTHER_EQUITY_INVEST, OTHER_NONCURRENT_FINASSET, INVEST_REALESTATE, FIXED_ASSET, CIP, USERIGHT_ASSET, INTANGIBLE_ASSET, LONG_PREPAID_EXPENSE, DEFER_TAX_ASSET, OTHER_NONCURRENT_ASSET, TOTAL_NONCURRENT_ASSETS, TOTAL_ASSETS, SHORT_LOAN, NOTE_ACCOUNTS_PAYABLE, NOTE_PAYABLE, ACCOUNTS_PAYABLE, ADVANCE_RECEIVABLES, CONTRACT_LIAB, STAFF_SALARY_PAYABLE, TAX_PAYABLE, OTHER_PAYABLE, DIVIDEND_PAYABLE, NONCURRENT_LIAB_1YEAR, OTHER_CURRENT_LIAB, TOTAL_CURRENT_LIAB, LONG_LOAN, LEASE_LIAB, LONG_PAYABLE, DEFER_TAX_LIAB, OTHER_NONCURRENT_LIAB, TOTAL_NONCURRENT_LIAB, TOTAL_LIABILITIES, SHARE_CAPITAL, CAPITAL_RESERVE, OTHER_COMPRE_INCOME, SURPLUS_RESERVE, UNASSIGN_RPOFIT, TOTAL_PARENT_EQUITY, MINORITY_EQUITY, TOTAL_EQUITY, TOTAL_LIAB_EQUITY, MONETARYFUNDS_YOY , TOTAL_ASSETS_YOY , TOTAL_LIABILITIES_YOY , TOTAL_EQUITY_YOY";
+    private static final String COLUMNS =
+            "\"SECUCODE\", \"SECURITY_CODE\", \"SECURITY_NAME_ABBR\", \"ORG_CODE\", \"ORG_TYPE\", " +
+            "\"REPORT_DATE\", \"REPORT_TYPE\", \"REPORT_DATE_NAME\", \"SECURITY_TYPE_CODE\", " +
+            "\"NOTICE_DATE\", \"UPDATE_DATE\", \"CURRENCY\", " +
+            "\"MONETARYFUNDS\", \"NOTE_ACCOUNTS_RECE\", \"NOTE_RECE\", \"ACCOUNTS_RECE\", " +
+            "\"PREPAYMENT\", \"OTHER_RECE\", \"INVENTORY\", \"OTHER_CURRENT_ASSET\", " +
+            "\"TOTAL_CURRENT_ASSETS\", \"LONG_EQUITY_INVEST\", \"OTHER_EQUITY_INVEST\", " +
+            "\"OTHER_NONCURRENT_FINASSET\", \"INVEST_REALESTATE\", \"FIXED_ASSET\", \"CIP\", " +
+            "\"USERIGHT_ASSET\", \"INTANGIBLE_ASSET\", \"LONG_PREPAID_EXPENSE\", " +
+            "\"DEFER_TAX_ASSET\", \"OTHER_NONCURRENT_ASSET\", \"TOTAL_NONCURRENT_ASSETS\", " +
+            "\"TOTAL_ASSETS\", \"SHORT_LOAN\", \"NOTE_ACCOUNTS_PAYABLE\", \"NOTE_PAYABLE\", " +
+            "\"ACCOUNTS_PAYABLE\", \"ADVANCE_RECEIVABLES\", \"CONTRACT_LIAB\", " +
+            "\"STAFF_SALARY_PAYABLE\", \"TAX_PAYABLE\", \"OTHER_PAYABLE\", \"DIVIDEND_PAYABLE\", " +
+            "\"NONCURRENT_LIAB_1YEAR\", \"OTHER_CURRENT_LIAB\", \"TOTAL_CURRENT_LIAB\", " +
+            "\"LONG_LOAN\", \"LEASE_LIAB\", \"LONG_PAYABLE\", \"DEFER_TAX_LIAB\", " +
+            "\"OTHER_NONCURRENT_LIAB\", \"TOTAL_NONCURRENT_LIAB\", \"TOTAL_LIABILITIES\", " +
+            "\"SHARE_CAPITAL\", \"CAPITAL_RESERVE\", \"OTHER_COMPRE_INCOME\", \"SURPLUS_RESERVE\", " +
+            "\"UNASSIGN_RPOFIT\", \"TOTAL_PARENT_EQUITY\", \"MINORITY_EQUITY\", \"TOTAL_EQUITY\", " +
+            "\"TOTAL_LIAB_EQUITY\", \"MONETARYFUNDS_YOY\", \"TOTAL_ASSETS_YOY\", " +
+            "\"TOTAL_LIABILITIES_YOY\", \"TOTAL_EQUITY_YOY\"";
 
     private static final RowMapper<StockBalanceSheet> ROW_MAPPER = (rs, rowNum) -> mapBalanceSheet(rs);
 
@@ -27,13 +45,13 @@ public class BalanceSheetRepository {
 
     public List<StockBalanceSheet> findBySecucode(String secucode) {
         return jdbcTemplate.query(
-                "SELECT " + COLUMNS + " FROM balance_sheet WHERE secucode = ?",
+                "SELECT " + COLUMNS + " FROM balance_sheet WHERE \"SECUCODE\" = ?",
                 ROW_MAPPER, secucode);
     }
 
     public StockBalanceSheet findBySecucodeAndReportDate(String secucode, String reportDate) {
         return jdbcTemplate.queryForObject(
-                "SELECT " + COLUMNS + " FROM balance_sheet WHERE secucode = ? AND report_date = ?",
+                "SELECT " + COLUMNS + " FROM balance_sheet WHERE \"SECUCODE\" = ? AND \"REPORT_DATE\" = ?",
                 ROW_MAPPER, secucode, reportDate);
     }
 

@@ -1,6 +1,5 @@
 package com.aitrade.stock.repository;
 
-import com.aitrade.stock.domain.StockBalanceSheet;
 import com.aitrade.stock.domain.StockIncomeStatement;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,7 +10,26 @@ import java.util.List;
 
 @Repository
 public class IncomeStatementRepository {
-    private static final String COLUMNS = "SECUCODE, SECURITY_CODE, SECURITY_NAME_ABBR, ORG_CODE, ORG_TYPE, REPORT_DATE, REPORT_TYPE, REPORT_DATE_NAME, SECURITY_TYPE_CODE, NOTICE_DATE, UPDATE_DATE, CURRENCY, TOTAL_OPERATE_INCOME, TOTAL_OPERATE_INCOME_YOY, OPERATE_INCOME, OPERATE_INCOME_YOY, INTEREST_INCOME, FEE_COMMISSION_INCOME, OTHER_BUSINESS_INCOME, TOTAL_OPERATE_COST, TOTAL_OPERATE_COST_YOY, OPERATE_COST, OPERATE_COST_YOY, INTEREST_EXPENSE, FEE_COMMISSION_EXPENSE, RESEARCH_EXPENSE, RESEARCH_EXPENSE_YOY, OPERATE_TAX_ADD, OPERATE_TAX_ADD_YOY, SALE_EXPENSE, SALE_EXPENSE_YOY, MANAGE_EXPENSE, MANAGE_EXPENSE_YOY, FINANCE_EXPENSE, FINANCE_EXPENSE_YOY, FE_INTEREST_EXPENSE, FE_INTEREST_INCOME, INVEST_INCOME, INVEST_INCOME_YOY, INVEST_JOINT_INCOME, ASSET_DISPOSAL_INCOME, ASSET_IMPAIRMENT_INCOME, CREDIT_IMPAIRMENT_INCOME, OTHER_INCOME, FAIRVALUE_CHANGE_INCOME, OPERATE_PROFIT, OPERATE_PROFIT_YOY, NONBUSINESS_INCOME, NONBUSINESS_EXPENSE, TOTAL_PROFIT, TOTAL_PROFIT_YOY, INCOME_TAX, NETPROFIT, NETPROFIT_YOY, CONTINUED_NETPROFIT, PARENT_NETPROFIT, MINORITY_INTEREST, DEDUCT_PARENT_NETPROFIT, BASIC_EPS, DILUTED_EPS, OTHER_COMPRE_INCOME, PARENT_OCI, ABLE_OCI, UNABLE_OCI, CONVERT_DIFF, TOTAL_COMPRE_INCOME, PARENT_TCI, MINORITY_TCI";
+    private static final String COLUMNS =
+            "\"SECUCODE\", \"SECURITY_CODE\", \"SECURITY_NAME_ABBR\", \"ORG_CODE\", \"ORG_TYPE\", " +
+            "\"REPORT_DATE\", \"REPORT_TYPE\", \"REPORT_DATE_NAME\", \"SECURITY_TYPE_CODE\", " +
+            "\"NOTICE_DATE\", \"UPDATE_DATE\", \"CURRENCY\", " +
+            "\"TOTAL_OPERATE_INCOME\", \"TOTAL_OPERATE_INCOME_YOY\", \"OPERATE_INCOME\", " +
+            "\"OPERATE_INCOME_YOY\", \"INTEREST_INCOME\", \"FEE_COMMISSION_INCOME\", " +
+            "\"OTHER_BUSINESS_INCOME\", \"TOTAL_OPERATE_COST\", \"TOTAL_OPERATE_COST_YOY\", " +
+            "\"OPERATE_COST\", \"OPERATE_COST_YOY\", \"INTEREST_EXPENSE\", " +
+            "\"FEE_COMMISSION_EXPENSE\", \"RESEARCH_EXPENSE\", \"RESEARCH_EXPENSE_YOY\", " +
+            "\"OPERATE_TAX_ADD\", \"OPERATE_TAX_ADD_YOY\", \"SALE_EXPENSE\", \"SALE_EXPENSE_YOY\", " +
+            "\"MANAGE_EXPENSE\", \"MANAGE_EXPENSE_YOY\", \"FINANCE_EXPENSE\", \"FINANCE_EXPENSE_YOY\", " +
+            "\"FE_INTEREST_EXPENSE\", \"FE_INTEREST_INCOME\", \"INVEST_INCOME\", \"INVEST_INCOME_YOY\", " +
+            "\"INVEST_JOINT_INCOME\", \"ASSET_DISPOSAL_INCOME\", \"ASSET_IMPAIRMENT_INCOME\", " +
+            "\"CREDIT_IMPAIRMENT_INCOME\", \"OTHER_INCOME\", \"FAIRVALUE_CHANGE_INCOME\", " +
+            "\"OPERATE_PROFIT\", \"OPERATE_PROFIT_YOY\", \"NONBUSINESS_INCOME\", " +
+            "\"NONBUSINESS_EXPENSE\", \"TOTAL_PROFIT\", \"TOTAL_PROFIT_YOY\", \"INCOME_TAX\", " +
+            "\"NETPROFIT\", \"NETPROFIT_YOY\", \"CONTINUED_NETPROFIT\", \"PARENT_NETPROFIT\", " +
+            "\"MINORITY_INTEREST\", \"DEDUCT_PARENT_NETPROFIT\", \"BASIC_EPS\", \"DILUTED_EPS\", " +
+            "\"OTHER_COMPRE_INCOME\", \"PARENT_OCI\", \"ABLE_OCI\", \"UNABLE_OCI\", " +
+            "\"CONVERT_DIFF\", \"TOTAL_COMPRE_INCOME\", \"PARENT_TCI\", \"MINORITY_TCI\"";
 
     private static final RowMapper<StockIncomeStatement> ROW_MAPPER = (rs, rowNum) -> mapIncomeStatement(rs);
 
@@ -24,13 +42,13 @@ public class IncomeStatementRepository {
 
     public List<StockIncomeStatement> findBySecucode(String secucode) {
         return jdbcTemplate.query(
-                "SELECT " + COLUMNS + " FROM income_statement WHERE secucode = ?",
+                "SELECT " + COLUMNS + " FROM income_statement WHERE \"SECUCODE\" = ?",
                 ROW_MAPPER, secucode);
     }
 
     public StockIncomeStatement findBySecucodeAndReportDate(String secucode, String reportDate) {
         return jdbcTemplate.queryForObject(
-                "SELECT " + COLUMNS + " FROM income_statement WHERE secucode = ? AND report_date = ?",
+                "SELECT " + COLUMNS + " FROM income_statement WHERE \"SECUCODE\" = ? AND \"REPORT_DATE\" = ?",
                 ROW_MAPPER, secucode, reportDate);
     }
 

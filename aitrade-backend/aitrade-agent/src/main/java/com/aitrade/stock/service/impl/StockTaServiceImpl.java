@@ -1,6 +1,7 @@
 package com.aitrade.stock.service.impl;
 
 import com.aitrade.stock.handler.StockTaHandler;
+import com.aitrade.stock.service.IFinancialRiskFilterService;
 import com.aitrade.stock.service.IStockTaService;
 import com.aitrade.tickflow.domain.TfStock;
 import com.aitrade.tickflow.repository.AStockKlineRepository;
@@ -8,8 +9,10 @@ import com.aitrade.tickflow.repository.TfStockRepository;
 import com.aitrade.tickflow.utils.StockFilter;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -29,8 +32,16 @@ public class StockTaServiceImpl implements IStockTaService {
     @Resource
     private ScheduledExecutorService scheduledExecutorService;
 
+    @Autowired
+    private IFinancialRiskFilterService financialRiskFilterService;
+
     @Override
     public void startTA() {
+        LocalDate date = LocalDate.now();
+        startTA(date);
+    }
+    @Override
+    public void startTA(LocalDate date) {
         //获取所有股票标识
         List<TfStock> stockList = tfStockRepository.findAll();
         if(stockList == null || stockList.isEmpty()) {
@@ -45,6 +56,10 @@ public class StockTaServiceImpl implements IStockTaService {
                 .toList();
 
         //过滤掉基本面不健康，存在假突破风向的股票
+        stockList = stockList
+                .stream()
+                .filter(stock -> !financialRiskFilterService.isRisk(stock.getCode(), date))
+                .toList();
 
         //定基调，判断现在是牛市、熊市，还是震荡市
 

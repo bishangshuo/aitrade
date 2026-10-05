@@ -142,6 +142,11 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      */
 
 
+    /**
+     * 构造方法，注入 TimescaleDB/PostgreSQL 的 JdbcTemplate。
+     *
+     * @param jdbcTemplate 用于直接查询三张财务表的 JDBC 模板
+     */
     public FinancialRiskFilterServiceImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -231,6 +236,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             LocalDate asOfDate
     ) {
 
+        // 入参基本校验：证券代码与截止日期均不允许为空
         if (!StringUtils.hasText(secuCode)) {
             throw new IllegalArgumentException("secuCode不能为空");
         }
@@ -239,15 +245,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             throw new IllegalArgumentException("asOfDate不能为空");
         }
 
+        // 统一标准化：去空格并转大写，保证与库内 SECUCODE 写法一致
         secuCode = secuCode.trim().toUpperCase();
 
+        // 第一步：加载截至 asOfDate 已可见的三张表数据
         FinancialData data =
                 loadFinancialData(secuCode, asOfDate);
 
+        // 第二步：先评估数据质量（缺哪些期、覆盖率、质量等级）
         DataQuality quality = analyzeDataQuality(data);
 
         FinancialRiskResult result = new FinancialRiskResult();
 
+        // 以下将本次分析上下文与质量统计结果回填到输出对象
         result.setAsOfDate(asOfDate);
 
         result.setSecuCode(secuCode);
@@ -264,6 +274,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         result.setCompletePeriods(quality.getCompletePeriods());
 
+        // 观测期数：取三张表中覆盖最多的一张，代表实际可用历史长度
         result.setObservedPeriods(Math.max(
                 quality.getIncomePeriods(),
                 Math.max(
@@ -288,6 +299,9 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         /*
          * 数据完全不存在。
+         *
+         * 三表均无任何报告期：不判风险也不判选股，
+         * 直接返回 UNKNOWN，避免把“没数据”误当“有风险”。
          */
         if (result.getObservedPeriods() == 0) {
 
@@ -306,6 +320,8 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         /*
          * 财务风险分析。
+         *
+         * 五个维度依次评估，每个维度内部自行判断数据是否可用。
          */
         List<DimensionResult> dimensions = new ArrayList<>();
 
@@ -331,6 +347,9 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         /*
          * 保存维度评分。
+         *
+         * 仅可计算（available）的维度才写入得分与风险理由，
+         * 缺失维度不参与，不强行给分也不记 0。
          */
         for (DimensionResult dimension : dimensions) {
 
@@ -352,6 +371,9 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         /*
          * 计算动态风险分。
+         *
+         * availableWeight：所有可计算维度的权重之和，
+         * 用于衡量本次评分到底基于了多少可用信息。
          */
         BigDecimal availableWeight = dimensions.stream()
                 .filter(d -> d.isAvailable())
@@ -406,11 +428,23 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 一次性加载指定股票、截至 asOfDate 已可见的全部财务数据。
+     *
+     * 三张表分别独立加载（利润表、资产负债表、现金流量表），
+     * 加载完成后再各自构建“报告期 -> 行数据”的索引 Map，
+     * 供后续数据质量分析与各风险维度评估复用。
+     *
+     * @param secuCode 证券代码（含市场后缀，已大写）
+     * @param asOfDate 历史可见性截止日，只加载该日期之前已披露的报告
+     * @return 聚合后的财务数据容器
+     */
     private FinancialData loadFinancialData(
             String secuCode,
             LocalDate asOfDate
     ) {
 
+        // 三张表各自独立加载，互不作为前提（不用 INNER JOIN）
         FinancialData data = new FinancialData();
 
         data.setIncome(loadIncomeStatement(secuCode, asOfDate));
@@ -419,6 +453,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         data.setCashFlow(loadCashFlowStatement(secuCode, asOfDate));
 
+        // 各自按“报告期 -> 行数据”建索引，供后续快速查找同期数据
         data.setIncomeMap(toMap(data.getIncome()));
 
         data.setBalanceMap(toMap(data.getBalance()));
@@ -437,6 +472,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
     ) {
 
         String sql =
+                // 外层：只选取利润表所需字段
                 "SELECT " +
                         "\"SECUCODE\", " +
                         "\"REPORT_DATE\", " +
@@ -451,7 +487,11 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         "\"NETPROFIT\", " +
                         "\"PARENT_NETPROFIT\", " +
                         "\"DEDUCT_PARENT_NETPROFIT\" " +
+                // 内层：同一报告期可能存在多个披露版本（如更正公告），
+                // 用 ROW_NUMBER 按 披露日期/更新日期 降序编号，
+                // 外层仅保留 rn = 1，即截至查询时点的最新版本文档
                 "FROM ( " +
+                    "SELECT *, " +
                     "SELECT *, " +
                     "ROW_NUMBER() OVER ( " +
                         "PARTITION BY \"SECUCODE\", \"REPORT_DATE\" " +
@@ -466,6 +506,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 "WHERE rn = 1 " +
                 "ORDER BY \"REPORT_DATE\"";
 
+        // 截止参数取 asOfDate 次日零点，用 < 比较等价于“含当日全部披露”
         return jdbcTemplate.query(
                 sql,
                 this::mapIncomeRow,
@@ -483,6 +524,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
     ) {
 
         String sql =
+                // 外层：只选取资产负债表所需字段
                 "SELECT " +
                         "\"SECUCODE\", " +
                         "\"REPORT_DATE\", " +
@@ -501,6 +543,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         "\"TOTAL_LIAB_EQUITY\", " +
                         "\"ACCOUNTS_RECE\", " +
                         "\"INVENTORY\" " +
+                // 内层：同上，按报告期取截至时点的最新披露版本
                 "FROM ( " +
                     "SELECT *, " +
                     "ROW_NUMBER() OVER ( " +
@@ -516,6 +559,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 "WHERE rn = 1 " +
                 "ORDER BY \"REPORT_DATE\"";
 
+        // 截止参数取 asOfDate 次日零点，用 < 比较等价于“含当日全部披露”
         return jdbcTemplate.query(
                 sql,
                 this::mapBalanceRow,
@@ -533,6 +577,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
     ) {
 
         String sql =
+                // 外层：只选取现金流量表所需字段
                 "SELECT " +
                         "\"SECUCODE\", " +
                         "\"REPORT_DATE\", " +
@@ -548,6 +593,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         "\"END_CCE\", " +
                         "\"OPINION_TYPE\", " +
                         "\"OSOPINION_TYPE\" " +
+                // 内层：同上，按报告期取截至时点的最新披露版本
                 "FROM ( " +
                     "SELECT *, " +
                     "ROW_NUMBER() OVER ( " +
@@ -563,6 +609,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 "WHERE rn = 1 " +
                 "ORDER BY \"REPORT_DATE\"";
 
+        // 截止参数取 asOfDate 次日零点，用 < 比较等价于“含当日全部披露”
         return jdbcTemplate.query(
                 sql,
                 this::mapCashFlowRow,
@@ -577,6 +624,16 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 利润表结果集行映射器。
+     *
+     * 先构建包含公共元信息（报告期、披露日期等）的基础行，
+     * 再逐字段读取盈利相关指标写入行容器；字段为 NULL 时不写入，
+     * 以便下游区分“缺失”与“数值为 0”。
+     *
+     * 注：以下 put() 均为“列名 -> 行内键名”的一一映射，
+     * 键名与数据库列名保持一致，取值时缺失字段不写入。
+     */
     private FinancialRow mapIncomeRow(
             java.sql.ResultSet rs,
             int rowNum
@@ -606,6 +663,15 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         return row;
     }
 
+    /**
+     * 资产负债表结果集行映射器。
+     *
+     * 读取货币资金、流动/非流动资产与负债、总资产、总负债、
+     * 股东权益、应收账款、存货等偿债与资产质量相关字段。
+     *
+     * 注：TOTAL_NONCURRENT_ASSETS / TOTAL_NONCURRENT_LIAB /
+     * TOTAL_LIAB_EQUITY 当前已读取但评分逻辑未直接使用。
+     */
     private FinancialRow mapBalanceRow(
             java.sql.ResultSet rs,
             int rowNum
@@ -678,6 +744,12 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         return row;
     }
 
+    /**
+     * 现金流量表结果集行映射器。
+     *
+     * 读取经营/投资/筹资活动现金流净额、现金及现金等价物净增加额、
+     * 期初期末现金余额等现金流相关字段。
+     */
     private FinancialRow mapCashFlowRow(
             java.sql.ResultSet rs,
             int rowNum
@@ -730,6 +802,13 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         return row;
     }
 
+    /**
+     * 构建基础行：读取三张表共有的元信息字段。
+     *
+     * 包括证券代码、报告期（REPORT_DATE）、报告类型/名称、
+     * 公告日期（NOTICE_DATE）、更新日期（UPDATE_DATE）。
+     * 时间戳统一按系统时区转换为 LocalDate，为空则保持 null。
+     */
     private FinancialRow baseRow(
             java.sql.ResultSet rs
     ) throws java.sql.SQLException {
@@ -738,6 +817,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         row.setSecuCode(rs.getString("SECUCODE"));
 
+        // 报告期：时间戳非空才按系统时区取日期，为空则保留 null
         Timestamp reportTimestamp =
                 rs.getTimestamp("REPORT_DATE");
 
@@ -753,6 +833,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         row.setReportDateName(rs.getString("REPORT_DATE_NAME"));
 
+        // 公告日期（NOTICE_DATE）：历史可见性截断的基准时间
         Timestamp noticeTimestamp =
                 rs.getTimestamp("NOTICE_DATE");
 
@@ -764,6 +845,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                             .toLocalDate());
         }
 
+        // 更新日期（UPDATE_DATE）：同一披露时点内的版本排序辅助字段
         Timestamp updateTimestamp =
                 rs.getTimestamp("UPDATE_DATE");
 
@@ -778,6 +860,17 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         return row;
     }
 
+    /**
+     * 安全地把结果集中的数值字段写入行容器。
+     *
+     * 关键点：当数据库字段为 NULL 时不写入，避免把“数据缺失”
+     * 误当作 0 参与指标计算，符合“数据缺失 != 财务风险”原则。
+     *
+     * @param row    目标行
+     * @param key    行内存放该指标的键名
+     * @param rs     结果集
+     * @param column 数据库列名
+     */
     private void put(
             FinancialRow row,
             String key,
@@ -787,11 +880,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         BigDecimal value = rs.getBigDecimal(column);
 
+        // 仅在非 NULL 时写入：NULL 代表数据缺失，不能当作 0
         if (value != null) {
             row.getValues().put(key, value);
         }
     }
 
+    /**
+     * 将行列表按报告期构建索引 Map。
+     *
+     * 过滤掉报告期缺失的行；同一报告期若出现重复，保留先出现的行，
+     * 便于后续按日期快速定位某张表的某个报告期数据。
+     */
     private Map<LocalDate, FinancialRow> toMap(
             List<FinancialRow> rows
     ) {
@@ -802,6 +902,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         Collectors.toMap(
                                 r -> r.getReportDate(),
                                 r -> r,
+                                // 合并函数：同报告期重复时保留先入者 (a)
                                 (a, b) -> a
                         )
                 );
@@ -813,6 +914,24 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 分析三张表的数据质量。
+     *
+     * 以最近的 12 个真实报告期（{@link #EXPECTED_PERIOD_COUNT}）为基准，
+     * 分别统计利润表/资产负债表/现金流量表的覆盖期数与缺失报告期，
+     * 计算各表覆盖率，并据此判定整体数据质量等级（DataLevel）：
+     * <ul>
+     *   <li>INSUFFICIENT：有效历史严重不足，基本无法分析</li>
+     *   <li>LIMITED_HISTORY：历史较短，长期趋势可信度有限</li>
+     *   <li>FULL：三张表在目标期内完全齐备</li>
+     *   <li>DATA_ANOMALY：至少一张核心表完全缺失（结构性缺失，非财务风险）</li>
+     *   <li>DATA_GAP：三张表存在部分报告期缺失</li>
+     * </ul>
+     * 同时将发现的缺失情况记录为告警信息，供结果输出展示。
+     *
+     * @param data 已加载的三张表财务数据
+     * @return 数据质量分析结果
+     */
     private DataQuality analyzeDataQuality(
             FinancialData data
     ) {
@@ -850,6 +969,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         quality.setExpectedPeriods(quality.getExpectedReportDates().size());
 
+        // 取三张表实际存在的报告期集合，用于比对期望期是否缺失
         Set<LocalDate> incomeDates =
                 data.getIncomeMap().keySet();
 
@@ -859,6 +979,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         Set<LocalDate> cashDates =
                 data.getCashFlowMap().keySet();
 
+        // 逐个检查期望报告期，分别记录三张表各自的缺失期
         for (LocalDate date :
                 quality.getExpectedReportDates()) {
 
@@ -887,6 +1008,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 各表有效期数 = 期望期数 - 该表缺失期数
         quality.setIncomePeriods(quality.getExpectedPeriods()
                         - quality.getMissingIncomePeriods().size());
 
@@ -899,6 +1021,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         quality.setCompletePeriods(quality.getExpectedPeriods()
                         - quality.getMissingCompletePeriods().size());
 
+        // 将各表有效期数换算为 0~1 的覆盖率，供结果展示
         quality.setIncomeCoverage(coverage(
                         quality.getIncomePeriods(),
                         quality.getExpectedPeriods()
@@ -921,6 +1044,9 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
 
         /*
          * 判断数据质量。
+         *
+         * maxPeriods：三表中覆盖最多的一张，代表可用历史上限；
+         * minPeriods：三表中覆盖最少的一张，用于识别结构性缺失。
          */
         int maxPeriods =
                 Math.max(
@@ -940,6 +1066,8 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         )
                 );
 
+        // 优先级从上到下：先判量不足，再判历史短，再判完全齐备，
+        // 再判结构性缺失，最后兼作部分缺失（DATA_GAP）
         if (maxPeriods < INSUFFICIENT_PERIODS) {
 
             quality.setDataLevel(DataLevel.INSUFFICIENT);
@@ -956,6 +1084,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                     "财务历史较短，长期趋势指标可信度有限"
             );
 
+        // 三表完全齐备：期望期与实际完整覆盖期一一对应
         } else if (quality.getCompletePeriods() == quality.getExpectedPeriods()) {
 
             quality.setDataLevel(DataLevel.FULL);
@@ -1024,6 +1153,9 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
     ) {
 
         String sql =
+                // 三张表的报告期 UNION 合并后去重（UNION 自身去重，
+                // DISTINCT 再保险），截至今日的不多于 latestDate 的报告期中
+                // 按时间倒序取最近 12 个，作为“期望报告期”基准
                 "SELECT DISTINCT \"REPORT_DATE\"::date " +
                 "FROM ( " +
                     "SELECT \"REPORT_DATE\" " +
@@ -1058,6 +1190,12 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         return dates;
     }
 
+    /**
+     * 取三张表中最大的报告期作为当前财务数据终点。
+     *
+     * @param data 已加载的财务数据
+     * @return 最晚报告期，无任何数据时返回 null
+     */
     private LocalDate latestReportDate(
             FinancialData data
     ) {
@@ -1069,12 +1207,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 合并三张表的行数据，计算其中的最大报告期。
+     *
+     * 忽略报告期缺失的行；全部为空时返回 null。
+     * （注：方法名首字母大写为现有命名，未作修改。）
+     */
     private LocalDate StreamMax(
             List<FinancialRow> income,
             List<FinancialRow> balance,
             List<FinancialRow> cashFlow
     ) {
 
+        // 三张表的行合并成一条流，取报告期非空的最大值
         return Arrays.asList(
                         income,
                         balance,
@@ -1088,15 +1233,22 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 .orElse(null);
     }
 
+    /**
+     * 计算覆盖率 = 实际有数据期数 / 期望期数。
+     *
+     * 保留 4 位小数；期望期数 <= 0 时直接返回 0，避免除零。
+     */
     private BigDecimal coverage(
             int actual,
             int expected
     ) {
 
+        // 期望期数无效（<=0）时直接返回 0，避免除零
         if (expected <= 0) {
             return BigDecimal.ZERO;
         }
 
+        // 实际期数 / 期望期数，保留 4 位小数
         return BigDecimal
                 .valueOf(actual)
                 .divide(
@@ -1106,13 +1258,20 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 );
     }
 
+    /**
+     * 汇总三张表缺失报告期的并集。
+     *
+     * 使用 TreeSet 去重并按日期升序，便于在结果中统一展示缺失区间。
+     */
     private List<LocalDate> unionMissingPeriods(
             DataQuality quality
     ) {
 
+        // TreeSet 自动去重并按日期升序排列
         Set<LocalDate> result =
                 new TreeSet<>();
 
+        // 依次并入三张表各自的缺失报告期
         result.addAll(
                 quality.getMissingIncomePeriods()
         );
@@ -1134,6 +1293,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 盈利能力维度评估（权重 0.25）。
+     *
+     * 基于利润表按报告期升序排列后的最新一行，逐项判定：
+     * <ul>
+     *   <li>当前净利润为负：+40</li>
+     *   <li>营业收入非正：+30</li>
+     *   <li>连续 ≥ 2 个报告期亏损：+20</li>
+     *   <li>归母净利润同比由正转负（仅用相同报告期类型）：+20</li>
+     * </ul>
+     * 得分上限 100。利润表无数据或关键盈利字段缺失时该维度不可用。
+     * 净利润优先取归母净利润（PARENT_NETPROFIT），回退到 NETPROFIT。
+     */
     private DimensionResult evaluateProfitability(
             FinancialData data
     ) {
@@ -1141,6 +1313,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         BigDecimal weight =
                 new BigDecimal("0.25");
 
+        // 利润表行按报告期升序排列，便于取末行为最新期
         List<FinancialRow> rows =
                 data.getIncome().stream()
                         .filter(r ->
@@ -1162,9 +1335,11 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 升序排列后末行即最新报告期
         FinancialRow latest =
                 rows.get(rows.size() - 1);
 
+        // 净利润优先取归母净利润，缺失时回退到净利润
         BigDecimal netProfit =
                 first(
                         latest,
@@ -1172,6 +1347,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         "NETPROFIT"
                 );
 
+        // 营收优先取营业总收入，缺失时回退到营业收入
         BigDecimal revenue =
                 first(
                         latest,
@@ -1283,6 +1459,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 得分上限截断到 100，避免多项叠加超过百分制
         if (score.compareTo(new BigDecimal("100")) > 0) {
             score = new BigDecimal("100");
         }
@@ -1295,6 +1472,12 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 从最新报告期往前回溯，统计归母净利润连续为负的报告期数。
+     *
+     * 只统计实际存在的数据，字段缺失则跳过（不计入也不中断），
+     * 遇到第一个盈利（≥ 0）即中断，最多统计 4 个报告期。
+     */
     private int consecutiveNegativeNetProfit(
             List<FinancialRow> rows
     ) {
@@ -1315,10 +1498,12 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                             "NETPROFIT"
                     );
 
+            // 字段缺失（为 null）：不计入也不中断，跳过继续往前看
             if (profit == null) {
                 continue;
             }
 
+            // 为负则连续计数，遇到首个非负值即中断回溯
             if (profit.compareTo(BigDecimal.ZERO) < 0) {
 
                 count++;
@@ -1342,6 +1527,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 经营现金流维度评估（权重 0.25）。
+     *
+     * 基于现金流量表最新一行，逐项判定：
+     * <ul>
+     *   <li>当前经营现金流净额为负：+35</li>
+     *   <li>连续 ≥ 2 个报告期经营现金流为负：+30</li>
+     *   <li>净利润为正但经营现金流为负（背离）：+25</li>
+     *   <li>期末现金及现金等价物余额为负：+20</li>
+     * </ul>
+     * 得分上限 100。无现金流表或经营现金流净额缺失时该维度不可用。
+     */
     private DimensionResult evaluateCashFlow(
             FinancialData data
     ) {
@@ -1349,6 +1546,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         BigDecimal weight =
                 new BigDecimal("0.25");
 
+        // 现金流量表行按报告期升序，末行为最新期
         List<FinancialRow> rows =
                 data.getCashFlow().stream()
                         .sorted(
@@ -1370,6 +1568,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         FinancialRow latest =
                 rows.get(rows.size() - 1);
 
+        // 取最新报告期的经营活动现金流净额（OCF），缺失则本维度不可用
         BigDecimal ocf =
                 latest.get(
                         "NETCASH_OPERATE"
@@ -1430,6 +1629,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
          *
          * 这里不要求净利润必须存在。
          */
+        // 跨表对齐：取与现金流最新期同一报告期的利润表行
         FinancialRow incomeLatest =
                 latestSameDate(
                         data.getIncome(),
@@ -1491,6 +1691,12 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 从最新报告期往前回溯，统计经营现金流净额连续为负的报告期数。
+     *
+     * 逻辑与 {@link #consecutiveNegativeNetProfit} 一致：
+     * 缺失字段跳过，遇到非负值中断，最多统计 4 个报告期。
+     */
     private int consecutiveNegativeCashFlow(
             List<FinancialRow> rows
     ) {
@@ -1509,6 +1715,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 continue;
             }
 
+            // 为负则连续计数，遇到首个非负值即中断回溯
             if (value.compareTo(BigDecimal.ZERO) < 0) {
 
                 count++;
@@ -1532,6 +1739,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 偿债能力维度评估（权重 0.25）。
+     *
+     * 基于资产负债表最新一行，逐项判定：
+     * <ul>
+     *   <li>资产负债率 > 70%：+35；> 85%：额外再 +25</li>
+     *   <li>流动比率（流动资产/流动负债） < 1：+30</li>
+     *   <li>货币资金/流动负债 < 10%：+20</li>
+     * </ul>
+     * 得分上限 100。无资产负债表或核心字段均缺失时该维度不可用。
+     * 所有比率仅在分母 > 0 时才计算，避免除零。
+     */
     private DimensionResult evaluateSolvency(
             FinancialData data
     ) {
@@ -1548,6 +1767,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 取资产负债表中的最新报告期行
         FinancialRow latest =
                 data.getBalance().stream()
                         .max(
@@ -1606,6 +1826,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 && liabilities != null
                 && assets.compareTo(BigDecimal.ZERO) > 0) {
 
+            // 资产负债率 = 总负债 / 总资产，保留 6 位小数
             BigDecimal debtRatio =
                     liabilities.divide(
                             assets,
@@ -1709,6 +1930,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 得分上限截断到 100，避免多项叠加超过百分制
         if (score.compareTo(new BigDecimal("100")) > 0) {
             score = new BigDecimal("100");
         }
@@ -1727,6 +1949,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 资产质量维度评估（权重 0.15）。
+     *
+     * 基于资产负债表最新一行，逐项判定：
+     * <ul>
+     *   <li>应收账款/总资产 > 30%：+25；> 50%：额外再 +25</li>
+     *   <li>存货/流动资产 > 50%：+25</li>
+     *   <li>应收账款同比增长 > 50%：+25</li>
+     * </ul>
+     * 得分上限 100。无资产负债表或关键字段缺失时该维度不可用。
+     * 同比仅在上一年相同报告期存在时才计算。
+     */
     private DimensionResult evaluateAssetQuality(
             FinancialData data
     ) {
@@ -1743,6 +1977,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 取资产负债表中的最新报告期行
         FinancialRow latest =
                 data.getBalance().stream()
                         .max(
@@ -1761,6 +1996,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 取出资产质量相关关键字段（总资产/应收账款/存货/流动资产）
         BigDecimal assets =
                 latest.get("TOTAL_ASSETS");
 
@@ -1799,6 +2035,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 && assets != null
                 && assets.compareTo(BigDecimal.ZERO) > 0) {
 
+            // 应收账款占总资产比例，保留 6 位小数
             BigDecimal ratio =
                     receivable.divide(
                             assets,
@@ -1842,6 +2079,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 && currentAssets != null
                 && currentAssets.compareTo(BigDecimal.ZERO) > 0) {
 
+            // 存货占流动资产比例，保留 6 位小数
             BigDecimal ratio =
                     inventory.divide(
                             currentAssets,
@@ -1882,6 +2120,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                     && previousReceivable != null
                     && previousReceivable.compareTo(BigDecimal.ZERO) > 0) {
 
+                // 应收账款同比增长率 = (本期 - 上年同期) / 上年同期
                 BigDecimal growth =
                         receivable
                                 .subtract(previousReceivable)
@@ -1907,6 +2146,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 得分上限截断到 100，避免多项叠加超过百分制
         if (score.compareTo(new BigDecimal("100")) > 0) {
             score = new BigDecimal("100");
         }
@@ -1925,6 +2165,17 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 利润质量维度评估（权重 0.10）。
+     *
+     * 需同时使用利润表与现金流量表最新行，逐项判定：
+     * <ul>
+     *   <li>扣非归母净利润为负：+35</li>
+     *   <li>净利润为正但扣非净利润为负：+25</li>
+     *   <li>净利润为正但经营现金流为负：+40</li>
+     * </ul>
+     * 得分上限 100。利润表或现金流量表缺失、相关字段缺失时不可用。
+     */
     private DimensionResult evaluateProfitQuality(
             FinancialData data
     ) {
@@ -1942,6 +2193,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 分别取利润表与现金流量表的最新报告期行
         FinancialRow latestIncome =
                 data.getIncome().stream()
                         .max(
@@ -1970,6 +2222,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 取利润质量相关字段：净利润（回退）、扣非归母、经营现金流
         BigDecimal netProfit =
                 first(
                         latestIncome,
@@ -2058,6 +2311,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             );
         }
 
+        // 得分上限截断到 100，避免多项叠加超过百分制
         if (score.compareTo(new BigDecimal("100")) > 0) {
             score = new BigDecimal("100");
         }
@@ -2076,10 +2330,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 计算按实际可计算维度动态归一化的风险总分。
+     *
+     * 采用加权平均：总分 = Σ(维度得分 × 维度权重) / Σ(可用维度权重)。
+     * 仅统计 available=true 的维度，缺失数据的维度不参与计分也不分摊权重，
+     * 从而避免因数据不全而拉低或抬高总分，符合“按实际可计算维度动态归一化”。
+     * 无任何可用维度（权重和为 0）时返回 0。
+     */
     private BigDecimal calculateRiskScore(
             List<DimensionResult> dimensions
     ) {
 
+        // numerator = Σ(得分×权重)；denominator = Σ(可用维度权重)
         BigDecimal numerator =
                 BigDecimal.ZERO;
 
@@ -2089,6 +2352,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         for (DimensionResult dimension :
                 dimensions) {
 
+            // 不可计算维度直接跳过，既不参分也不分摊权重
             if (!dimension.isAvailable()) {
                 continue;
             }
@@ -2107,6 +2371,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                     );
         }
 
+        // 无任何可用维度（权重和为 0）时避免除零，返回 0
         if (denominator.compareTo(BigDecimal.ZERO) == 0) {
 
             return BigDecimal.ZERO;
@@ -2119,11 +2384,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 根据风险总分与可计算权重映射风险等级。
+     *
+     * 可计算权重不足 MIN_AVAILABLE_WEIGHT 时判为 UNKNOWN（不强行判风险）；
+     * 否则：得分 ≥ 80 为 HIGH，≥ 60 为 MEDIUM，其余为 LOW。
+     */
     private RiskLevel resolveRiskLevel(
             BigDecimal score,
             BigDecimal availableWeight
     ) {
 
+        // 可计算权重不足：信息太少，不强行定级，返回 UNKNOWN
         if (availableWeight.compareTo(
                 MIN_AVAILABLE_WEIGHT
         ) < 0) {
@@ -2131,6 +2403,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return RiskLevel.UNKNOWN;
         }
 
+        // 得分 >= 80：高风险
         if (score.compareTo(
                 new BigDecimal("80")
         ) >= 0) {
@@ -2138,6 +2411,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return RiskLevel.HIGH;
         }
 
+        // 得分 >= 60：中等风险
         if (score.compareTo(
                 new BigDecimal("60")
         ) >= 0) {
@@ -2145,6 +2419,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return RiskLevel.MEDIUM;
         }
 
+        // 其余：低风险
         return RiskLevel.LOW;
     }
 
@@ -2154,6 +2429,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 判定是否允许进入后续技术面选股。
+     *
+     * 与“是否存在财务风险”相互独立，侧重于数据充分性：
+     * <ul>
+     *   <li>HIGH 风险：直接剔除</li>
+     *   <li>INSUFFICIENT（数据完全不足）：无法可靠过滤，剔除</li>
+     *   <li>无任何利润表且无资产负债表：无法判断基本面，剔除</li>
+     *   <li>DATA_ANOMALY（结构性缺失）：仅在利润表或资产负债表 ≥ 6 期时才允许</li>
+     *   <li>LIMITED_HISTORY（历史较短）：只要实际观测期数 ≥ 4 即允许</li>
+     *   <li>DATA_GAP：数据不完整但可继续，允许</li>
+     * </ul>
+     */
     private boolean resolveTechnicalSelectionEligibility(
             FinancialRiskResult result,
             DataQuality quality
@@ -2270,6 +2558,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return null;
         }
 
+        // 先解析当前行报告期类型；类型未知则无法做同类型同比
         ReportPeriodType currentType =
                 resolveReportPeriodType(current);
 
@@ -2279,6 +2568,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return null;
         }
 
+        // 目标同比日：同报告期往前推一年
         LocalDate targetDate =
                 current.getReportDate().minusYears(1);
 
@@ -2294,6 +2584,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 continue;
             }
 
+            // 优先匹配：日期相同且报告期类型相同（Q1→Q1、H1→H1 等）
             ReportPeriodType rowType =
                     resolveReportPeriodType(row);
 
@@ -2330,10 +2621,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 解析行数据所属的报告期类型（一季报/中报/三季报/年报）。
+     *
+     * 优先根据 REPORT_DATE_NAME 与 REPORT_TYPE 的文本关键字识别；
+     * 都无法匹配时，再按报告期的月份+日期兜底（如 3-31、6-30、9-30、12-31）；
+     * 仍无法判定时返回 UNKNOWN。
+     */
     private ReportPeriodType resolveReportPeriodType(
             FinancialRow row
     ) {
 
+        // 文本字段为 null 时用空串占位，避免拼接时出现 "null"
         String name =
                 row.getReportDateName() == null
                         ? ""
@@ -2344,9 +2643,11 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                         ? ""
                         : row.getReportType();
 
+        // 名称 + 类型合并为一段文本，统一做关键字匹配
         String text =
                 name + " " + type;
 
+        // 关键字识别：一季报
         if (text.contains("一季报")
                 || text.contains("一季")
                 || text.contains("Q1")) {
@@ -2354,6 +2655,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return ReportPeriodType.Q1;
         }
 
+        // 关键字识别：中报/半年报
         if (text.contains("中报")
                 || text.contains("半年报")
                 || text.contains("H1")
@@ -2362,6 +2664,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return ReportPeriodType.H1;
         }
 
+        // 关键字识别：三季报
         if (text.contains("三季报")
                 || text.contains("Q3")
                 || text.contains("三季")) {
@@ -2369,6 +2672,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             return ReportPeriodType.Q3;
         }
 
+        // 关键字识别：年报
         if (text.contains("年报")
                 || text.contains("年度")
                 || text.contains("FY")) {
@@ -2379,6 +2683,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         /*
          * 根据日期兜底。
          */
+        // 关键字都匹配不上时，按报告期的“月-日”推断类型
         if (row.getReportDate() != null) {
 
             int month =
@@ -2387,24 +2692,28 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             int day =
                     row.getReportDate().getDayOfMonth();
 
+            // 3-31 -> 一季报
             if (month == 3
                     && day == 31) {
 
                 return ReportPeriodType.Q1;
             }
 
+            // 6-30 -> 中报
             if (month == 6
                     && day == 30) {
 
                 return ReportPeriodType.H1;
             }
 
+            // 9-30 -> 三季报
             if (month == 9
                     && day == 30) {
 
                 return ReportPeriodType.Q3;
             }
 
+            // 12-31 -> 年报
             if (month == 12
                     && day == 31) {
 
@@ -2412,6 +2721,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 均无法判定
         return ReportPeriodType.UNKNOWN;
     }
 
@@ -2421,15 +2731,22 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
      * ============================================================
      */
 
+    /**
+     * 在指定行列表中查找与目标报告期相同的第一行。
+     *
+     * 用于跨表对齐（如按现金流最新报告期去利润表取同期净利润）。
+     */
     private FinancialRow latestSameDate(
             List<FinancialRow> rows,
             LocalDate date
     ) {
 
+        // 目标日期为空直接返回 null，避免无意义扫描
         if (date == null) {
             return null;
         }
 
+        // 流式过滤出报告期等于目标日期的第一行
         return rows.stream()
                 .filter(
                         r -> date.equals(
@@ -2440,15 +2757,22 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
                 .orElse(null);
     }
 
+    /**
+     * 按优先级依次取行中第一个非空的指标值。
+     *
+     * 用于字段回退，例如优先取归母净利润、其次取净利润。
+     */
     private BigDecimal first(
             FinancialRow row,
             String... columns
     ) {
 
+        // 行为空直接返回，防止 NPE
         if (row == null) {
             return null;
         }
 
+        // 按传入列名顺序查找，命中第一个非空值即返回
         for (String column : columns) {
 
             BigDecimal value =
@@ -2459,9 +2783,13 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             }
         }
 
+        // 所有候选列均无值
         return null;
     }
 
+    /**
+     * 构造一个“可计算”的风险维度结果（available=true）。
+     */
     private DimensionResult available(
             RiskDimension dimension,
             BigDecimal score,
@@ -2469,6 +2797,7 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
             String reason
     ) {
 
+        // available 置 true，表示该维度基于现有数据完成了打分
         return new DimensionResult(
                 dimension,
                 true,
@@ -2478,12 +2807,18 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 构造一个“不可计算”的风险维度结果（available=false）。
+     *
+     * 得分置 0，但仍保留权重，用于记录该维度因数据缺失而跳过。
+     */
     private DimensionResult unavailable(
             RiskDimension dimension,
             BigDecimal weight,
             String reason
     ) {
 
+        // available 置 false，得分固定为 0，reason 记录不可用原因
         return new DimensionResult(
                 dimension,
                 false,
@@ -2493,14 +2828,19 @@ public class FinancialRiskFilterServiceImpl implements IFinancialRiskFilterServi
         );
     }
 
+    /**
+     * 将数值统一保留 2 位小数（四舍五入）；null 安全返回 0。
+     */
     private BigDecimal scale(
             BigDecimal value
     ) {
 
+        // null 视为 0，保证输出字段非空
         if (value == null) {
             return BigDecimal.ZERO;
         }
 
+        // 统一保留 2 位小数，四舍五入
         return value.setScale(
                 2,
                 RoundingMode.HALF_UP
