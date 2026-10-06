@@ -1,9 +1,14 @@
 package com.aitrade.stock.service.impl;
 
+import com.aitrade.stock.domain.MarketRegimeResult;
 import com.aitrade.stock.handler.StockTaHandler;
 import com.aitrade.stock.service.IFinancialRiskFilterService;
 import com.aitrade.stock.service.IStockTaService;
+import com.aitrade.stock.strategy.factory.StockStrategyFactory;
+import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
+import com.aitrade.tickflow.domain.TfKline;
 import com.aitrade.tickflow.domain.TfStock;
+import com.aitrade.tickflow.enums.TfKlinePeriod;
 import com.aitrade.tickflow.repository.AStockKlineRepository;
 import com.aitrade.tickflow.repository.TfStockRepository;
 import com.aitrade.tickflow.utils.StockFilter;
@@ -19,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.aitrade.stock.component.MarketRegimeAnalyzer;
 
 @Service
 @Slf4j
@@ -34,6 +40,12 @@ public class StockTaServiceImpl implements IStockTaService {
 
     @Autowired
     private IFinancialRiskFilterService financialRiskFilterService;
+
+    @Autowired
+    private MarketRegimeAnalyzer marketRegimeAnalyzer;
+
+    @Autowired
+    private StockStrategyFactory strategyFactory;
 
     @Override
     public void startTA() {
@@ -62,6 +74,10 @@ public class StockTaServiceImpl implements IStockTaService {
                 .toList();
 
         //定基调，判断现在是牛市、熊市，还是震荡市
+        //上证指数日K
+        List<TfKline> shIndexKlineList = aStockKlineRepository.findBySymbol(TfKlinePeriod.DAY_1, "000001.SH");
+        MarketRegimeResult marketRegimeResult = marketRegimeAnalyzer.analyze(shIndexKlineList);
+
 
         //将任务分发给线程池处理
         int total = stockList.size();
@@ -75,7 +91,7 @@ public class StockTaServiceImpl implements IStockTaService {
                 public void run() {
                     try {
                         limiter.acquire();
-                        doTAOfStock(stock, new StockTaHandler() {
+                        doTAOfStock(stock, marketRegimeResult, new StockTaHandler() {
                             @Override
                             public void complete(TfStock stock, boolean success) {
                                 if(success) {
@@ -108,7 +124,17 @@ public class StockTaServiceImpl implements IStockTaService {
         }, scheduledExecutorService);
     }
 
-    private void doTAOfStock(TfStock stock, StockTaHandler handler) {
+    private void doTAOfStock(TfStock stock, MarketRegimeResult marketRegimeResult, StockTaHandler handler) {
+        //根据市场基调，获取对应的股票筛选策略
+        StockPickerStrategy strategy = strategyFactory.getStrategy(marketRegimeResult.getRegime());
 
+        //股票日K
+        List<TfKline> stockKlineList = aStockKlineRepository.findBySymbol(TfKlinePeriod.DAY_1, stock.getCode());
+        if(strategy.filter(stockKlineList)) {
+            log.info("股票 {} 筛选通过", stock.getCode());
+            //TODO: 获取股票的TA指标
+        } else {
+            log.info("股票 {} 筛选失败", stock.getCode());
+        }
     }
 }

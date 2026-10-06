@@ -92,7 +92,7 @@ public class OkxWsClient {
         }
     };
 
-    @PostConstruct
+    //@PostConstruct
     public void start() {
         // 1. 初始化默认交易对（如果Redis中没有的话）
         symbolManager.initDefaultsIfEmpty();

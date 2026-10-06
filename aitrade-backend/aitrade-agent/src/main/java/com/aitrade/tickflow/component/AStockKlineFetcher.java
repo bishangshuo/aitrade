@@ -48,7 +48,7 @@ public class AStockKlineFetcher {
     private static final long FIVE_YEARS_MILLIS = 5L * 365 * 24 * 60 * 60 * 1000;
 
 
-//    @Scheduled(fixedDelay = 8000)
+    @Scheduled(fixedDelay = 8000)
     public void fetch() {
         log.info("开始新一轮K线数据获取");
         // 获取交易所列表

@@ -28,6 +28,7 @@ const std::string ID_BALANCE_SHEET = "business-balancesheet";
 const std::string ID_INCOME_STATEMENT = "business-incomestatement";
 const std::string ID_CASH_FLOW_STATEMENT = "business-cashflowstatement";
 
+//目前暂时不用破解验证码
 const int SLIDER_TO_BG_OFFSET_X = -28;  // 请根据实际测量调整
 const int SLIDER_TO_BG_OFFSET_Y = -200;
 const int BG_WIDTH = 264;
