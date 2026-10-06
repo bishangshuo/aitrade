@@ -81,21 +81,12 @@ RuoYi-App/unpackage/*
 RuoYi-App/node_modules/*
 
 ######################################################################
-# Development Tools
 
-RuoYi-App/.idea/*
-RuoYi-App/.vscode/*
-RuoYi-App/.hbuilderx/*
-
-RuoYi-App/package-lock.json
-RuoYi-App/yarn.lock
-
-spider/AStockDataGrabber/.vs
-spider/AStockDataGrabber/packages
-spider/AStockDataGrabber/x64
-spider/AStockDataGrabber/AStockDataGrabber/x64
-
-spider/AStockNewsSpider/.vs
-spider/AStockNewsSpider/packages
-spider/AStockNewsSpider/x64
-spider/AStockNewsSpider/AStockNewsSpider/x64
+/AStockDataGrabber/x64
+/AStockDataGrabber/packages
+/AStockDataGrabber/.vs
+/AStockDataGrabber/AStockDataGrabber/x64
+/AStockNewsSpider/x64
+/AStockNewsSpider/packages
+/AStockNewsSpider/.vs
+/AStockNewsSpider/AStockNewsSpider/x64
