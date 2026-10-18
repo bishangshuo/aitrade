@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TaTaskMapper">
+    
+    <resultMap type="TaTask" id="TaTaskResult">
+        <result property="id"    column="id"    />
+        <result property="startBeginTime"    column="start_begin_time"    />
+        <result property="startEndTime"    column="start_end_time"    />
+        <result property="finishTime"    column="finish_time"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectTaTaskVo">
+        select id, start_begin_time, start_end_time, finish_time, status, create_time, update_time, remark from ta_task
+    </sql>
+
+    <select id="selectTaTaskList" parameterType="TaTask" resultMap="TaTaskResult">
+        <include refid="selectTaTaskVo"/>
+        <where>  
+            <if test="startBeginTime != null "> and start_begin_time = #{startBeginTime}</if>
+            <if test="startEndTime != null "> and start_end_time = #{startEndTime}</if>
+            <if test="finishTime != null "> and finish_time = #{finishTime}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+        order by start_begin_time desc
+    </select>
+
+    <select id="getPendingTasks" parameterType="TaTask" resultMap="TaTaskResult">
+        <include refid="selectTaTaskVo"/>
+        where status = 0 or status = 1
+        order by start_begin_time asc
+    </select>
+    
+    <select id="selectTaTaskById" parameterType="Long" resultMap="TaTaskResult">
+        <include refid="selectTaTaskVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTaTask" parameterType="TaTask" useGeneratedKeys="true" keyProperty="id">
+        insert into ta_task
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="startBeginTime != null">start_begin_time,</if>
+            <if test="startEndTime != null">start_end_time,</if>
+            <if test="finishTime != null">finish_time,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="startBeginTime != null">#{startBeginTime},</if>
+            <if test="startEndTime != null">#{startEndTime},</if>
+            <if test="finishTime != null">#{finishTime},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTaTask" parameterType="TaTask">
+        update ta_task
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="startBeginTime != null">start_begin_time = #{startBeginTime},</if>
+            <if test="startEndTime != null">start_end_time = #{startEndTime},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTaTaskById" parameterType="Long">
+        delete from ta_task where id = #{id}
+    </delete>
+
+    <delete id="deleteTaTaskByIds" parameterType="String">
+        delete from ta_task where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

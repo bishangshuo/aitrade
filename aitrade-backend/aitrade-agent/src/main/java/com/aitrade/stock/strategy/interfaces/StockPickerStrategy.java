@@ -1,8 +1,10 @@
 package com.aitrade.stock.strategy.interfaces;
 
+import com.aitrade.stock.domain.StockPickDiagnostic;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.tickflow.domain.TfKline;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface StockPickerStrategy {
@@ -18,6 +20,19 @@ public interface StockPickerStrategy {
     default boolean filter(List<TfKline> klines, StockAnalysisContext context) {
         return filter(klines);
     }
+
+    StockPickDiagnostic analyze(
+            String symbol,
+            String stockName,
+            LocalDate tradeDate,
+            List<TfKline> klines, StockAnalysisContext context
+    );
+
+    /**
+     * 獲取策略代碼
+     * @return
+     */
+    Integer getStrategyCode();
 
     /**
      * 獲取策略名稱

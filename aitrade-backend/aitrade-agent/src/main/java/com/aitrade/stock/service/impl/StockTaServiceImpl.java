@@ -1,11 +1,16 @@
 package com.aitrade.stock.service.impl;
 
 import com.aitrade.stock.domain.MarketRegimeResult;
-import com.aitrade.stock.handler.StockTaHandler;
+import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.handler.StockTaCompleteListener;
+import com.aitrade.stock.handler.DayTaResultListener;
+import com.aitrade.stock.mapper.StockPickDiagnosticMapper;
 import com.aitrade.stock.service.IFinancialRiskFilterService;
 import com.aitrade.stock.service.IStockTaService;
+import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.stock.strategy.factory.StockStrategyFactory;
 import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
+import com.aitrade.stock.strategy.strategies.ChipCalculator;
 import com.aitrade.tickflow.domain.TfKline;
 import com.aitrade.tickflow.domain.TfStock;
 import com.aitrade.tickflow.enums.TfKlinePeriod;
@@ -23,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.aitrade.stock.component.MarketRegimeAnalyzer;
 
@@ -47,17 +53,22 @@ public class StockTaServiceImpl implements IStockTaService {
     @Autowired
     private StockStrategyFactory strategyFactory;
 
+    @Autowired
+    private StockPickDiagnosticMapper diagnosticMapper;
+
     @Override
-    public void startTA() {
+    public void startTA(AtomicBoolean isRunning, DayTaResultListener listener) {
         LocalDate date = LocalDate.now();
-        startTA(date);
+        startTA(date, isRunning, listener);
     }
     @Override
-    public void startTA(LocalDate date) {
+    public void startTA(LocalDate date, AtomicBoolean isRunning, DayTaResultListener dayTaResultListener) {
         //获取所有股票标识
         List<TfStock> stockList = tfStockRepository.findAll();
         if(stockList == null || stockList.isEmpty()) {
             log.warn("没有任何股票， 返回");
+            isRunning.set(false);
+            dayTaResultListener.onComplete();
             return;
         }
 
@@ -75,7 +86,7 @@ public class StockTaServiceImpl implements IStockTaService {
 
         //定基调，判断现在是牛市、熊市，还是震荡市
         //上证指数日K
-        List<TfKline> shIndexKlineList = aStockKlineRepository.findBySymbol(TfKlinePeriod.DAY_1, "000001.SH");
+        List<TfKline> shIndexKlineList = aStockKlineRepository.findBySymbolBefore(TfKlinePeriod.DAY_1, "000001.SH", date, 250);
         MarketRegimeResult marketRegimeResult = marketRegimeAnalyzer.analyze(shIndexKlineList);
 
 
@@ -91,7 +102,7 @@ public class StockTaServiceImpl implements IStockTaService {
                 public void run() {
                     try {
                         limiter.acquire();
-                        doTAOfStock(stock, marketRegimeResult, new StockTaHandler() {
+                        doTAOfStock(stock, marketRegimeResult, date, dayTaResultListener, new StockTaCompleteListener() {
                             @Override
                             public void complete(TfStock stock, boolean success) {
                                 if(success) {
@@ -110,31 +121,50 @@ public class StockTaServiceImpl implements IStockTaService {
             });
         }
 
-        //异步等待所有任务完成
+        //异步等待所有选股任务完成
         CompletableFuture.runAsync(new Runnable() {
             @Override
             public void run() {
                 try {
                     latch.await();
-                    log.info("所有任务完成， 成功 {}， 失败 {}", successCnt.get(), failCnt.get());
+                    log.info("所有选股任务完成， 成功 {}， 失败 {}", successCnt.get(), failCnt.get());
+                    isRunning.set(false);
+                    dayTaResultListener.onComplete();
                 } catch (Exception e) {
-                    log.error("等待任务完成失败", e);
+                    log.error("等待选股任务完成失败", e);
+                    isRunning.set(false);
+                    dayTaResultListener.onComplete();
                 }
             }
         }, scheduledExecutorService);
     }
 
-    private void doTAOfStock(TfStock stock, MarketRegimeResult marketRegimeResult, StockTaHandler handler) {
+    /**
+     * 对单只股票进行TA分析
+     * @param stock 股票标的
+     * @param marketRegimeResult 市场基调
+     * @param date
+     * @param handler
+     */
+    private void doTAOfStock(TfStock stock, MarketRegimeResult marketRegimeResult, LocalDate date, DayTaResultListener dayTaResultListener, StockTaCompleteListener handler) {
         //根据市场基调，获取对应的股票筛选策略
         StockPickerStrategy strategy = strategyFactory.getStrategy(marketRegimeResult.getRegime());
 
         //股票日K
-        List<TfKline> stockKlineList = aStockKlineRepository.findBySymbol(TfKlinePeriod.DAY_1, stock.getCode());
-        if(strategy.filter(stockKlineList)) {
-            log.info("股票 {} 筛选通过", stock.getCode());
-            //TODO: 获取股票的TA指标
-        } else {
-            log.info("股票 {} 筛选失败", stock.getCode());
+        List<TfKline> stockKlineList = aStockKlineRepository.findBySymbolBefore(TfKlinePeriod.DAY_1, stock.getCode(), date, 250);
+
+        // 利用 K 線直接計算籌碼 Context（ 获利盘 profitRatio & 筹码集中度 isChipSinglePeak ）
+        StockAnalysisContext context = ChipCalculator.calculateContextFromKlines(stockKlineList);
+
+        StockPickDiagnostic diagnostic = strategy.analyze(stock.getSymbol(), stock.getName(), date, stockKlineList, context);
+        if(diagnostic.getPassed().equals(1)) {
+            log.info("股票 {}:{} 通过筛选", stock.getSymbol(), stock.getName());
         }
+
+        diagnosticMapper.insertBatch(List.of(diagnostic));
+
+        dayTaResultListener.stockSelectResult(stock, diagnostic);
+
+        handler.complete(stock, true);
     }
 }

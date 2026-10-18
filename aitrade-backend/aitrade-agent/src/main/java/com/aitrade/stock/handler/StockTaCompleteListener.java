@@ -2,6 +2,6 @@ package com.aitrade.stock.handler;
 
 import com.aitrade.tickflow.domain.TfStock;
 
-public interface StockTaHandler {
+public interface StockTaCompleteListener {
     void complete(TfStock stock, boolean success);
 }

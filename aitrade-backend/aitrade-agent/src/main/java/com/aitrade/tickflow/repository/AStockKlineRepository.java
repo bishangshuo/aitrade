@@ -11,6 +11,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -105,6 +107,31 @@ public class AStockKlineRepository {
         return Arrays.stream(result)
                 .flatMapToInt(Arrays::stream)
                 .sum();
+    }
+
+    /**
+     * 查询某只股票某日期之前的数据
+     * @param period
+     * @param sysmbol
+     * @param date 日期
+     * @param count 数量
+     * @return
+     */
+    public List<TfKline> findBySymbolBefore(
+            TfKlinePeriod period,
+            String sysmbol,
+            LocalDate date,
+            int count
+    ) {
+        //date换成timestamp
+        long endTimestamp = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long startTimestamp = endTimestamp - count * period.getDuration();
+        return findBySymbol(
+                period,
+                sysmbol,
+                startTimestamp,
+                endTimestamp
+        );
     }
 
     /**

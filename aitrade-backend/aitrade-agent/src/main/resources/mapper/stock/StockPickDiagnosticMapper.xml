@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.StockPickDiagnosticMapper">
+
+<!--    CREATE TABLE `ta_stock_pick_diagnostic` (-->
+<!--    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主鍵ID',-->
+<!--    `symbol` varchar(20) NOT NULL COMMENT '股票代碼',-->
+<!--    `stock_name` varchar(50) DEFAULT NULL COMMENT '股票名稱',-->
+<!--    `trade_date` date NOT NULL COMMENT '交易日期',-->
+<!--    `strategy_code` int(11) NOT NULL COMMENT '策略代码',-->
+<!--    `strategy_name` varchar(100) NOT NULL COMMENT '策略名稱',-->
+<!--    `passed` tinyint(1) NOT NULL COMMENT '是否通過篩選 (1:通過, 0:未通過)',-->
+<!--    `fail_reason` varchar(50) DEFAULT NULL COMMENT '未通過時的攔截原因',-->
+<!--    `match_vcp` tinyint(1) DEFAULT '0' COMMENT '是否符合VCP形態',-->
+<!--    `match_ma_coil` tinyint(1) DEFAULT '0' COMMENT '是否符合均線粘合形態',-->
+<!--    `match_air_refuel` tinyint(1) DEFAULT '0' COMMENT '是否符合空中加油形態',-->
+<!--    `close_price` decimal(10,2) DEFAULT NULL COMMENT '當日收盤價',-->
+<!--    `change_rate` decimal(6,4) DEFAULT NULL COMMENT '當日漲跌幅',-->
+<!--    `vol_ratio` decimal(8,4) DEFAULT NULL COMMENT '放量倍數',-->
+<!--    `vcp_amplitude` decimal(6,4) DEFAULT NULL COMMENT 'VCP前期10日振幅',-->
+<!--    `macd_dif` decimal(10,4) DEFAULT NULL COMMENT 'MACD DIF',-->
+<!--    `macd_dea` decimal(10,4) DEFAULT NULL COMMENT 'MACD DEA',-->
+<!--    `macd_hist` decimal(10,4) DEFAULT NULL COMMENT 'MACD柱狀體',-->
+<!--    `kdj_k` decimal(8,2) DEFAULT NULL COMMENT 'KDJ K值',-->
+<!--    `kdj_d` decimal(8,2) DEFAULT NULL COMMENT 'KDJ D值',-->
+<!--    `rsi14` decimal(8,2) DEFAULT NULL COMMENT 'RSI 14數值',-->
+<!--    `obv` decimal(20,4) DEFAULT NULL COMMENT 'OBV能量潮數值',-->
+<!--    `profit_ratio` decimal(6,4) DEFAULT NULL COMMENT '獲利盤比例',-->
+<!--    `is_chip_single_peak` tinyint(1) DEFAULT NULL COMMENT '是否籌碼單峰密集',-->
+<!--    `volume_score` decimal(6,2) DEFAULT NULL COMMENT '量價爆發力得分',-->
+<!--    `chip_score` decimal(6,2) DEFAULT NULL COMMENT '籌碼面得分',-->
+<!--    `momentum_score` decimal(6,2) DEFAULT NULL COMMENT '技術動能得分',-->
+<!--    `pattern_score` decimal(6,2) DEFAULT NULL COMMENT '形態品質得分',-->
+<!--    `total_score` decimal(6,2) DEFAULT NULL COMMENT '綜合總得分',-->
+<!--    `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '記錄創建時間',-->
+<!--    PRIMARY KEY (`id`),-->
+<!--    KEY `idx_date_passed` (`trade_date`,`passed`),-->
+<!--    KEY `idx_symbol_date` (`symbol`,`trade_date`),-->
+<!--    KEY `idx_fail_reason` (`fail_reason`),-->
+<!--    KEY `idx_total_score` (`total_score`)-->
+<!--    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='選股策略診斷與回測明細表';-->
+
+    <resultMap id="StockPickDiagnosticResult" type="StockPickDiagnostic">
+        <result property="id" column="id" />
+        <result property="symbol" column="symbol" />
+        <result property="stockName" column="stock_name" />
+        <result property="tradeDate" column="trade_date" />
+        <result property="strategyCode" column="strategy_code" />
+        <result property="strategyName" column="strategy_name" />
+        <result property="passed" column="passed" />
+        <result property="failReason" column="fail_reason" />
+        <result property="matchVcp" column="match_vcp" />
+        <result property="matchMaCoil" column="match_ma_coil" />
+        <result property="matchAirRefuel" column="match_air_refuel" />
+        <result property="closePrice" column="close_price" />
+        <result property="changeRate" column="change_rate" />
+        <result property="volRatio" column="vol_ratio" />
+        <result property="vcpAmplitude" column="vcp_amplitude" />
+        <result property="macdDif" column="macd_dif" />
+        <result property="macdDea" column="macd_dea" />
+        <result property="macdHist" column="macd_hist" />
+        <result property="kdjK" column="kdj_k" />
+        <result property="kdjD" column="kdj_d" />
+        <result property="rsi14" column="rsi14" />
+        <result property="obv" column="obv" />
+        <result property="profitRatio" column="profit_ratio" />
+        <result property="isChipSinglePeak" column="is_chip_single_peak" />
+        <result property="volumeScore" column="volume_score" />
+        <result property="chipScore" column="chip_score" />
+        <result property="momentumScore" column="momentum_score" />
+        <result property="patternScore" column="pattern_score" />
+        <result property="totalScore" column="total_score" />
+        <result property="createdAt" column="created_at" />
+    </resultMap>
+    <sql id="selectStockPickDiagnostic">
+        select id, symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
+        match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
+        vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
+        kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
+        volume_score, chip_score, momentum_score, pattern_score, total_score, created_at
+    </sql>
+
+    <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ta_stock_pick_diagnostic (
+        symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
+        match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
+        vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
+        kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
+        volume_score, chip_score, momentum_score, pattern_score, total_score
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.symbol}, #{item.stockName}, #{item.tradeDate}, #{item.strategyCode}, #{item.strategyName}, #{item.passed}, #{item.failReason},
+            #{item.matchVcp}, #{item.matchMaCoil}, #{item.matchAirRefuel}, #{item.closePrice}, #{item.changeRate},
+            #{item.volRatio}, #{item.vcpAmplitude}, #{item.macdDif}, #{item.macdDea}, #{item.macdHist},
+            #{item.kdjK}, #{item.kdjD}, #{item.rsi14}, #{item.obv}, #{item.profitRatio}, #{item.isChipSinglePeak},
+            #{item.volumeScore}, #{item.chipScore}, #{item.momentumScore}, #{item.patternScore}, #{item.totalScore}
+            )
+        </foreach>
+    </insert>
+    <select id="selectTopScore" parameterType="StockPickDiagnostic" resultMap="StockPickDiagnosticResult">
+        <include refid="selectStockPickDiagnostic"/>
+        <where>
+            <if test="et.symbol != null and et.symbol != ''"> and symbol = #{et.symbol} </if>
+            <if test="et.stockName != null and et.stockName != ''"> and stock_name like CONCAT('%', #{et.stockName}, '%') </if>
+            <if test="et.tradeDate != null"> and DATE(trade_date) = DATE(#{et.tradeDate}) </if>
+            <if test="et.strategyCode != null"> and strategy_code = #{et.strategyCode} </if>
+            <if test="et.strategyName != null and et.strategyName != ''"> and strategy_name like CONCAT('%', #{et.strategyName}, '%') </if>
+            <if test="et.passed != null"> and passed = #{et.passed} </if>
+        </where>
+        ORDER BY total_score DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

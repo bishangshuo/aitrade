@@ -14,10 +14,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cglib.core.Local;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -122,6 +125,60 @@ public class AStockKlineFetcher {
             return null;
         }
         return symbolArr.toJavaList(TfStock.class);
+    }
+
+    public List<TfKline> getKlineSingle(TfStock stock, LocalDate fromDate, Integer days, String period) {
+        //开始时间：毫秒时间戳
+        long startTime = fromDate.atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+        //结束时间：毫秒时间戳
+        long endTime = fromDate.plusDays(days).atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+
+        String apiName = "/v1/klines?symbols=" + stock.getSymbol() + "&period=" + period + "&start_time=" + startTime + "&end_time=" + endTime;
+
+        String result = getWithDelay(apiName, null);
+        if(result == null || result.isEmpty()) {
+            log.warn("获取({})k线数据发生错误， 跳过", stock.getSymbol());
+            return null;
+        }
+
+        JSONObject jsonObject = JSONObject.parseObject(result);
+        if(jsonObject == null) {
+            log.warn("获取({})K线数据json格式错误， 跳过", stock.getSymbol());
+            return null;
+        }
+        JSONObject jsonData = jsonObject.getJSONObject("data");
+        if(jsonData == null) {
+            log.warn("获取({})K线数据data为空， 跳过", stock.getSymbol());
+            return null;
+        }
+
+        List<Long> timestamps = jsonData.getJSONArray("timestamp").toJavaList(Long.class);
+        List<BigDecimal> opens = jsonData.getJSONArray("open").toJavaList(BigDecimal.class);
+        List<BigDecimal> highs = jsonData.getJSONArray("high").toJavaList(BigDecimal.class);
+        List<BigDecimal> lows = jsonData.getJSONArray("low").toJavaList(BigDecimal.class);
+        List<BigDecimal> closes = jsonData.getJSONArray("close").toJavaList(BigDecimal.class);
+        List<BigDecimal> volumes = jsonData.getJSONArray("volume").toJavaList(BigDecimal.class);
+        List<BigDecimal> amounts = jsonData.getJSONArray("amount").toJavaList(BigDecimal.class);
+
+        List<TfKline> tfKlineList = new ArrayList<>();
+        for(int i = 0; i < timestamps.size(); i++) {
+            TfKline tfKline = new TfKline();
+            tfKline.setSymbol(stock.getSymbol());
+            tfKline.setStockName(stock.getName());
+            tfKline.setTimestamp(timestamps.get(i));
+            tfKline.setOpen(opens.get(i));
+            tfKline.setHigh(highs.get(i));
+            tfKline.setLow(lows.get(i));
+            tfKline.setClose(closes.get(i));
+            tfKline.setVolume(volumes.get(i));
+            tfKline.setAmount(amounts.get(i));
+            tfKlineList.add(tfKline);
+        }
+        return tfKlineList;
     }
 
     /**
