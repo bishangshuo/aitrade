@@ -2,11 +2,13 @@ package com.aitrade.stock.service.impl;
 
 import com.aitrade.common.utils.DateUtils;
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.vo.HolidayGap;
 import com.aitrade.stock.handler.ActionMessageListener;
 import com.aitrade.stock.handler.DayTaResultListener;
 import com.aitrade.stock.mapper.StockPickDiagnosticMapper;
 import com.aitrade.stock.service.IBackTestService;
 import com.aitrade.stock.service.IStockTaService;
+import com.aitrade.stock.service.ITaCalService;
 import com.aitrade.tickflow.component.AStockKlineFetcher;
 import com.aitrade.tickflow.domain.TfKline;
 import com.aitrade.tickflow.domain.TfStock;
@@ -17,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,6 +36,9 @@ public class BackTestServiceImpl implements IBackTestService {
 
     @Resource
     private AStockKlineFetcher aStockKlineFetcher;
+
+    @Autowired
+    private ITaCalService taCalService;
 
     @Override
     public SseEmitter backTest(LocalDate fromDate, LocalDate toDate) {
@@ -54,13 +61,48 @@ public class BackTestServiceImpl implements IBackTestService {
             return;
         }
 
+        //currentDate之后的5天，如果遇上中长假，则不买
+        HolidayGap holidayGap = taCalService.isLongHolidayAhead(DateUtils.toDate(currentDate));
+        if(holidayGap != null && holidayGap.isWillBeHoliday()) {
+            //遇上中长假，则不买；并跳到假后第一个交易日
+            log.warn("遇上中长假，则不买；并跳到假后第一个交易日 {}", holidayGap);
+            Date nextTradeDate = holidayGap.getTradeDateAfterHoliday();
+            LocalDate nextTradeLocalDate = nextTradeDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            doRunTest(nextTradeLocalDate, toDate, emitter);
+            return;
+        }
+
         AtomicBoolean isRunning = new AtomicBoolean(false);
         stockTaService.startTA(currentDate, isRunning, new DayTaResultListener() {
             @Override
             public void onComplete() {
                 //回测买入、持仓、卖出
                 LocalDate nextDay = currentDate.plusDays(1);
-                doRunTest(nextDay, toDate, emitter);
+                takeAction(currentDate, emitter, new ActionMessageListener() {
+
+                    @Override
+                    public void onComplete() {
+                        LocalDate nextDate = currentDate.plusDays(1);
+                        doRunTest(nextDate, toDate, emitter);
+                    }
+
+                    @Override
+                    public void onFail(String message) {
+                        log.warn("当日没有选出符合条件的股票 {}", currentDate);
+                        LocalDate nextDate = currentDate.plusDays(1);
+                        doRunTest(nextDate, toDate, emitter);
+                    }
+
+                    @Override
+                    public void onBuy() {
+
+                    }
+
+                    @Override
+                    public void onSell() {
+
+                    }
+                });
             }
 
             @Override
@@ -79,10 +121,12 @@ public class BackTestServiceImpl implements IBackTestService {
         List<StockPickDiagnostic> passedStocks = stockPickDiagnosticMapper.selectTopScore(query, 10);
         if(passedStocks == null || passedStocks.isEmpty()) {
             log.info("没有找到符合条件的股票");
+            actionMessageListener.onFail("没有找到符合条件的股票");
             return;
         }
         //选排前面的10个个股进行买入
         for(StockPickDiagnostic stockPickDiagnostic : passedStocks) {
+            //如果
             //获取T+1日到T+5日的stock的分时k线
             TfStock stock = new TfStock();
             stock.setSymbol(stockPickDiagnostic.getSymbol());
@@ -105,11 +149,7 @@ public class BackTestServiceImpl implements IBackTestService {
         if(klines == null || klines.isEmpty()) {
             log.warn("该股票自{}的第二个交易日起的5天内没有K线数据，可能停牌了, 不买入", currentDate.toString());
         }
-        //第二交易日如果与currentDate不连续，也不要买
-        //所谓连续，是剔除正常节假日后的连续
-        if(!klines.get(0).getTimestamp().equals(currentDate.plusDays(1))) {
-            log.warn("该股票的第二个交易日不是{}，不买入", currentDate.toString());
-            return;
-        }
     }
+
+    //判断一个股票从第二个交易
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TaCalMapper">
+    
+    <resultMap type="TaCal" id="TaCalResult">
+        <result property="id"    column="id"    />
+        <result property="calDate"    column="cal_date"    />
+        <result property="isOpen"    column="is_open"    />
+        <result property="weekDay"    column="week_day"    />
+    </resultMap>
+
+    <sql id="selectTaCalVo">
+        select id, cal_date, is_open, week_day from ta_cal
+    </sql>
+
+    <select id="selectTaCalList" parameterType="TaCal" resultMap="TaCalResult">
+        <include refid="selectTaCalVo"/>
+        <where>  
+            <if test="calDate != null "> and cal_date = #{calDate}</if>
+            <if test="isOpen != null "> and is_open = #{isOpen}</if>
+            <if test="weekDay != null "> and week_day = #{weekDay}</if>
+            <if test="beginDate != null and endDate != null"> and cal_date between DATE(#{beginDate}) and DATE(#{endDate})</if>
+            <if test="beginDate != null and endDate == null"> and cal_date &gt;= DATE(#{beginDate})</if>
+            <if test="beginDate == null and endDate != null"> and cal_date &lt;= DATE(#{endDate})</if>
+        </where>
+        order by cal_date asc
+    </select>
+    
+    <select id="selectTaCalById" parameterType="Long" resultMap="TaCalResult">
+        <include refid="selectTaCalVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTaCal" parameterType="TaCal" useGeneratedKeys="true" keyProperty="id">
+        insert into ta_cal
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="calDate != null">cal_date,</if>
+            <if test="isOpen != null">is_open,</if>
+            <if test="weekDay != null">week_day,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="calDate != null">#{calDate},</if>
+            <if test="isOpen != null">#{isOpen},</if>
+            <if test="weekDay != null">#{weekDay},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTaCal" parameterType="TaCal">
+        update ta_cal
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="calDate != null">cal_date = #{calDate},</if>
+            <if test="isOpen != null">is_open = #{isOpen},</if>
+            <if test="weekDay != null">week_day = #{weekDay},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTaCalById" parameterType="Long">
+        delete from ta_cal where id = #{id}
+    </delete>
+
+    <delete id="deleteTaCalByIds" parameterType="String">
+        delete from ta_cal where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
