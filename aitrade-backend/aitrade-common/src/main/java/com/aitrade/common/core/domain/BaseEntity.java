@@ -7,12 +7,14 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
 
 /**
  * Entity基类
  * 
  * @author aitrade
  */
+@Data
 public class BaseEntity implements Serializable
 {
     private static final long serialVersionUID = 1L;

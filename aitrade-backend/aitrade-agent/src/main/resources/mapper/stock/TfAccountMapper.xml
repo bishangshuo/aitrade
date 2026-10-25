@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfAccountMapper">
+    
+    <resultMap type="TfAccount" id="TfAccountResult">
+        <result property="id"    column="id"    />
+        <result property="accountNo"    column="account_no"    />
+        <result property="initialCapital"    column="initial_capital"    />
+        <result property="availableCash"    column="available_cash"    />
+        <result property="frozenCash"    column="frozen_cash"    />
+        <result property="marketValue"    column="market_value"    />
+        <result property="totalAssets"    column="total_assets"    />
+        <result property="totalPnl"    column="total_pnl"    />
+        <result property="totalPnlPct"    column="total_pnl_pct"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTfAccountVo">
+        select id, account_no, initial_capital, available_cash, frozen_cash, market_value, total_assets, total_pnl, total_pnl_pct, status, create_time, update_time from tf_account
+    </sql>
+
+    <select id="selectTfAccountList" parameterType="TfAccount" resultMap="TfAccountResult">
+        <include refid="selectTfAccountVo"/>
+        <where>  
+            <if test="accountNo != null  and accountNo != ''"> and account_no = #{accountNo}</if>
+            <if test="initialCapital != null "> and initial_capital = #{initialCapital}</if>
+            <if test="availableCash != null "> and available_cash = #{availableCash}</if>
+            <if test="frozenCash != null "> and frozen_cash = #{frozenCash}</if>
+            <if test="marketValue != null "> and market_value = #{marketValue}</if>
+            <if test="totalAssets != null "> and total_assets = #{totalAssets}</if>
+            <if test="totalPnl != null "> and total_pnl = #{totalPnl}</if>
+            <if test="totalPnlPct != null "> and total_pnl_pct = #{totalPnlPct}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfAccountById" parameterType="Long" resultMap="TfAccountResult">
+        <include refid="selectTfAccountVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfAccount" parameterType="TfAccount" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_account
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no,</if>
+            <if test="initialCapital != null">initial_capital,</if>
+            <if test="availableCash != null">available_cash,</if>
+            <if test="frozenCash != null">frozen_cash,</if>
+            <if test="marketValue != null">market_value,</if>
+            <if test="totalAssets != null">total_assets,</if>
+            <if test="totalPnl != null">total_pnl,</if>
+            <if test="totalPnlPct != null">total_pnl_pct,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">#{accountNo},</if>
+            <if test="initialCapital != null">#{initialCapital},</if>
+            <if test="availableCash != null">#{availableCash},</if>
+            <if test="frozenCash != null">#{frozenCash},</if>
+            <if test="marketValue != null">#{marketValue},</if>
+            <if test="totalAssets != null">#{totalAssets},</if>
+            <if test="totalPnl != null">#{totalPnl},</if>
+            <if test="totalPnlPct != null">#{totalPnlPct},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfAccount" parameterType="TfAccount">
+        update tf_account
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no = #{accountNo},</if>
+            <if test="initialCapital != null">initial_capital = #{initialCapital},</if>
+            <if test="availableCash != null">available_cash = #{availableCash},</if>
+            <if test="frozenCash != null">frozen_cash = #{frozenCash},</if>
+            <if test="marketValue != null">market_value = #{marketValue},</if>
+            <if test="totalAssets != null">total_assets = #{totalAssets},</if>
+            <if test="totalPnl != null">total_pnl = #{totalPnl},</if>
+            <if test="totalPnlPct != null">total_pnl_pct = #{totalPnlPct},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfAccountById" parameterType="Long">
+        delete from tf_account where id = #{id}
+    </delete>
+
+    <delete id="deleteTfAccountByIds" parameterType="String">
+        delete from tf_account where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfFundFlowMapper">
+    
+    <resultMap type="TfFundFlow" id="TfFundFlowResult">
+        <result property="id"    column="id"    />
+        <result property="accountNo"    column="account_no"    />
+        <result property="tradeDate"    column="trade_date"    />
+        <result property="bizType"    column="biz_type"    />
+        <result property="amount"    column="amount"    />
+        <result property="balanceAfter"    column="balance_after"    />
+        <result property="relatedOrderId"    column="related_order_id"    />
+        <result property="remark"    column="remark"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectTfFundFlowVo">
+        select id, account_no, trade_date, biz_type, amount, balance_after, related_order_id, remark, create_time from tf_fund_flow
+    </sql>
+
+    <select id="selectTfFundFlowList" parameterType="TfFundFlow" resultMap="TfFundFlowResult">
+        <include refid="selectTfFundFlowVo"/>
+        <where>  
+            <if test="accountNo != null  and accountNo != ''"> and account_no = #{accountNo}</if>
+            <if test="tradeDate != null "> and trade_date = #{tradeDate}</if>
+            <if test="bizType != null  and bizType != ''"> and biz_type = #{bizType}</if>
+            <if test="amount != null "> and amount = #{amount}</if>
+            <if test="balanceAfter != null "> and balance_after = #{balanceAfter}</if>
+            <if test="relatedOrderId != null  and relatedOrderId != ''"> and related_order_id = #{relatedOrderId}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfFundFlowById" parameterType="Long" resultMap="TfFundFlowResult">
+        <include refid="selectTfFundFlowVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfFundFlow" parameterType="TfFundFlow" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_fund_flow
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no,</if>
+            <if test="tradeDate != null">trade_date,</if>
+            <if test="bizType != null and bizType != ''">biz_type,</if>
+            <if test="amount != null">amount,</if>
+            <if test="balanceAfter != null">balance_after,</if>
+            <if test="relatedOrderId != null">related_order_id,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">#{accountNo},</if>
+            <if test="tradeDate != null">#{tradeDate},</if>
+            <if test="bizType != null and bizType != ''">#{bizType},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="balanceAfter != null">#{balanceAfter},</if>
+            <if test="relatedOrderId != null">#{relatedOrderId},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfFundFlow" parameterType="TfFundFlow">
+        update tf_fund_flow
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no = #{accountNo},</if>
+            <if test="tradeDate != null">trade_date = #{tradeDate},</if>
+            <if test="bizType != null and bizType != ''">biz_type = #{bizType},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="balanceAfter != null">balance_after = #{balanceAfter},</if>
+            <if test="relatedOrderId != null">related_order_id = #{relatedOrderId},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfFundFlowById" parameterType="Long">
+        delete from tf_fund_flow where id = #{id}
+    </delete>
+
+    <delete id="deleteTfFundFlowByIds" parameterType="String">
+        delete from tf_fund_flow where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

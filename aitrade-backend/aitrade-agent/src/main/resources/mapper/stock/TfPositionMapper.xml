@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfPositionMapper">
+    
+    <resultMap type="TfPosition" id="TfPositionResult">
+        <result property="id"    column="id"    />
+        <result property="accountNo"    column="account_no"    />
+        <result property="symbol"    column="symbol"    />
+        <result property="stockName"    column="stock_name"    />
+        <result property="totalVolume"    column="total_volume"    />
+        <result property="availableVolume"    column="available_volume"    />
+        <result property="costPrice"    column="cost_price"    />
+        <result property="currentPrice"    column="current_price"    />
+        <result property="marketValue"    column="market_value"    />
+        <result property="unrealizedPnl"    column="unrealized_pnl"    />
+        <result property="unrealizedPnlPct"    column="unrealized_pnl_pct"    />
+        <result property="openDate"    column="open_date"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTfPositionVo">
+        select id, account_no, symbol, stock_name, total_volume, available_volume, cost_price, current_price, market_value, unrealized_pnl, unrealized_pnl_pct, open_date, create_time, update_time from tf_position
+    </sql>
+
+    <select id="selectTfPositionList" parameterType="TfPosition" resultMap="TfPositionResult">
+        <include refid="selectTfPositionVo"/>
+        <where>  
+            <if test="accountNo != null  and accountNo != ''"> and account_no = #{accountNo}</if>
+            <if test="symbol != null  and symbol != ''"> and symbol = #{symbol}</if>
+            <if test="stockName != null  and stockName != ''"> and stock_name like concat('%', #{stockName}, '%')</if>
+            <if test="totalVolume != null "> and total_volume = #{totalVolume}</if>
+            <if test="availableVolume != null "> and available_volume = #{availableVolume}</if>
+            <if test="costPrice != null "> and cost_price = #{costPrice}</if>
+            <if test="currentPrice != null "> and current_price = #{currentPrice}</if>
+            <if test="marketValue != null "> and market_value = #{marketValue}</if>
+            <if test="unrealizedPnl != null "> and unrealized_pnl = #{unrealizedPnl}</if>
+            <if test="unrealizedPnlPct != null "> and unrealized_pnl_pct = #{unrealizedPnlPct}</if>
+            <if test="openDate != null "> and open_date = #{openDate}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfPositionById" parameterType="Long" resultMap="TfPositionResult">
+        <include refid="selectTfPositionVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfPosition" parameterType="TfPosition" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_position
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no,</if>
+            <if test="symbol != null and symbol != ''">symbol,</if>
+            <if test="stockName != null and stockName != ''">stock_name,</if>
+            <if test="totalVolume != null">total_volume,</if>
+            <if test="availableVolume != null">available_volume,</if>
+            <if test="costPrice != null">cost_price,</if>
+            <if test="currentPrice != null">current_price,</if>
+            <if test="marketValue != null">market_value,</if>
+            <if test="unrealizedPnl != null">unrealized_pnl,</if>
+            <if test="unrealizedPnlPct != null">unrealized_pnl_pct,</if>
+            <if test="openDate != null">open_date,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">#{accountNo},</if>
+            <if test="symbol != null and symbol != ''">#{symbol},</if>
+            <if test="stockName != null and stockName != ''">#{stockName},</if>
+            <if test="totalVolume != null">#{totalVolume},</if>
+            <if test="availableVolume != null">#{availableVolume},</if>
+            <if test="costPrice != null">#{costPrice},</if>
+            <if test="currentPrice != null">#{currentPrice},</if>
+            <if test="marketValue != null">#{marketValue},</if>
+            <if test="unrealizedPnl != null">#{unrealizedPnl},</if>
+            <if test="unrealizedPnlPct != null">#{unrealizedPnlPct},</if>
+            <if test="openDate != null">#{openDate},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfPosition" parameterType="TfPosition">
+        update tf_position
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no = #{accountNo},</if>
+            <if test="symbol != null and symbol != ''">symbol = #{symbol},</if>
+            <if test="stockName != null and stockName != ''">stock_name = #{stockName},</if>
+            <if test="totalVolume != null">total_volume = #{totalVolume},</if>
+            <if test="availableVolume != null">available_volume = #{availableVolume},</if>
+            <if test="costPrice != null">cost_price = #{costPrice},</if>
+            <if test="currentPrice != null">current_price = #{currentPrice},</if>
+            <if test="marketValue != null">market_value = #{marketValue},</if>
+            <if test="unrealizedPnl != null">unrealized_pnl = #{unrealizedPnl},</if>
+            <if test="unrealizedPnlPct != null">unrealized_pnl_pct = #{unrealizedPnlPct},</if>
+            <if test="openDate != null">open_date = #{openDate},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfPositionById" parameterType="Long">
+        delete from tf_position where id = #{id}
+    </delete>
+
+    <delete id="deleteTfPositionByIds" parameterType="String">
+        delete from tf_position where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
