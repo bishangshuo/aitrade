@@ -118,15 +118,20 @@ public class BackTestServiceImpl implements IBackTestService {
         StockPickDiagnostic query = new StockPickDiagnostic();
         query.setTradeDate(currentDate);
         query.setPassed(1);
-        List<StockPickDiagnostic> passedStocks = stockPickDiagnosticMapper.selectTopScore(query, 10);
+        //备选50个
+        List<StockPickDiagnostic> passedStocks = stockPickDiagnosticMapper.selectTopScore(query, 50);
         if(passedStocks == null || passedStocks.isEmpty()) {
             log.info("没有找到符合条件的股票");
             actionMessageListener.onFail("没有找到符合条件的股票");
             return;
         }
         //选排前面的10个个股进行买入
+        int bought = 0;
         for(StockPickDiagnostic stockPickDiagnostic : passedStocks) {
-            //如果
+            //已达到10个买入上线
+            if(bought >= 10) {
+                break;
+            }
             //获取T+1日到T+5日的stock的分时k线
             TfStock stock = new TfStock();
             stock.setSymbol(stockPickDiagnostic.getSymbol());
@@ -135,6 +140,8 @@ public class BackTestServiceImpl implements IBackTestService {
             //买入
             buyStock(currentDate, emitter, stockPickDiagnostic, klines);
             //卖出
+
+            bought++;
         }
     }
 
