@@ -23,7 +23,7 @@ public class DemoTest {
     @Test
     public void test() {
         System.out.println("hello world");
-//        List<CryptoNews> news = cryptoNewsRssService.fetchJinse(20);
+//        List<CryptoNews> announce = cryptoNewsRssService.fetchJinse(20);
         List<CryptoNews> news = cryptoNewsRssService.fetchCoinTelegraph(20);
 
         for (CryptoNews cryptoNews : news) {

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.risk.mapper.TfRiskAnnMapper">
+    
+    <resultMap type="TfRiskAnn" id="TfRiskAnnResult">
+        <result property="id"    column="id"    />
+        <result property="publishTime"    column="publish_time"    />
+        <result property="stockCode"    column="stock_code"    />
+        <result property="stockName"    column="stock_name"    />
+        <result property="marketCode"    column="market_code"    />
+        <result property="annType"    column="ann_type"    />
+        <result property="sourceType"    column="source_type"    />
+        <result property="artCode"    column="art_code"    />
+        <result property="title"    column="title"    />
+        <result property="content"    column="content"    />
+        <result property="fileUrl"    column="file_url"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectTfRiskAnnVo">
+        select id, publish_time, stock_code, stock_name, market_code, ann_type, source_type, art_code, title, content, file_url, create_time from tf_risk_ann
+    </sql>
+
+    <select id="selectTfRiskAnnList" parameterType="TfRiskAnn" resultMap="TfRiskAnnResult">
+        <include refid="selectTfRiskAnnVo"/>
+        <where>  
+            <if test="publishTime != null "> and publish_time = #{publishTime}</if>
+            <if test="stockCode != null  and stockCode != ''"> and stock_code = #{stockCode}</if>
+            <if test="stockName != null  and stockName != ''"> and stock_name like concat('%', #{stockName}, '%')</if>
+            <if test="marketCode != null  and marketCode != ''"> and market_code = #{marketCode}</if>
+            <if test="annType != null  and annType != ''"> and ann_type = #{annType}</if>
+            <if test="sourceType != null  and sourceType != ''"> and source_type = #{sourceType}</if>
+            <if test="artCode != null  and artCode != ''"> and art_code = #{artCode}</if>
+            <if test="title != null  and title != ''"> and title = #{title}</if>
+            <if test="content != null  and content != ''"> and content = #{content}</if>
+            <if test="fileUrl != null  and fileUrl != ''"> and file_url = #{fileUrl}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfRiskAnnById" parameterType="Long" resultMap="TfRiskAnnResult">
+        <include refid="selectTfRiskAnnVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfRiskAnn" parameterType="TfRiskAnn" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_risk_ann
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="publishTime != null">publish_time,</if>
+            <if test="stockCode != null and stockCode != ''">stock_code,</if>
+            <if test="stockName != null">stock_name,</if>
+            <if test="marketCode != null">market_code,</if>
+            <if test="annType != null">ann_type,</if>
+            <if test="sourceType != null">source_type,</if>
+            <if test="artCode != null">art_code,</if>
+            <if test="title != null">title,</if>
+            <if test="content != null">content,</if>
+            <if test="fileUrl != null">file_url,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="publishTime != null">#{publishTime},</if>
+            <if test="stockCode != null and stockCode != ''">#{stockCode},</if>
+            <if test="stockName != null">#{stockName},</if>
+            <if test="marketCode != null">#{marketCode},</if>
+            <if test="annType != null">#{annType},</if>
+            <if test="sourceType != null">#{sourceType},</if>
+            <if test="artCode != null">#{artCode},</if>
+            <if test="title != null">#{title},</if>
+            <if test="content != null">#{content},</if>
+            <if test="fileUrl != null">#{fileUrl},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfRiskAnn" parameterType="TfRiskAnn">
+        update tf_risk_ann
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="stockCode != null and stockCode != ''">stock_code = #{stockCode},</if>
+            <if test="stockName != null">stock_name = #{stockName},</if>
+            <if test="marketCode != null">market_code = #{marketCode},</if>
+            <if test="annType != null">ann_type = #{annType},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="artCode != null">art_code = #{artCode},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="fileUrl != null">file_url = #{fileUrl},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfRiskAnnById" parameterType="Long">
+        delete from tf_risk_ann where id = #{id}
+    </delete>
+
+    <delete id="deleteTfRiskAnnByIds" parameterType="String">
+        delete from tf_risk_ann where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

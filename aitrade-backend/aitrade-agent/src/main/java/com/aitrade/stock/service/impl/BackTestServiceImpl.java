@@ -132,6 +132,7 @@ public class BackTestServiceImpl implements IBackTestService {
             if(bought >= 10) {
                 break;
             }
+            //过滤黑天鹅时间：下载公司公告，使用ai进行深度复核
             //获取T+1日到T+5日的stock的分时k线
             TfStock stock = new TfStock();
             stock.setSymbol(stockPickDiagnostic.getSymbol());
