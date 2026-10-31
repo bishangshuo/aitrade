@@ -1,8 +1,10 @@
 package com.aitrade.rag.service.impl;
 
 import com.aitrade.common.core.domain.HttpResponse;
+import com.aitrade.common.utils.AiTaskExecutionContext;
 import com.aitrade.common.utils.http.HttpUtils;
 import com.aitrade.common.utils.http.StreamHttpClient;
+import com.aitrade.rag.domain.AgentInfo;
 import com.aitrade.rag.domain.DataSet;
 import com.aitrade.rag.domain.RagApiResponse;
 import com.aitrade.rag.domain.vo.RagDocStatusVO;
@@ -36,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -92,12 +95,30 @@ public class RagApiServiceImpl implements IRagApiService {
         return HttpUtils.doPutJson(url, jsonString, headers);
     }
 
+    /**
+     * 发送RAG JSON请求；绑定AI任务时登记请求句柄，以便立即取消阻塞调用。
+     *
+     * @param apiName RAG接口路径
+     * @param jsonString JSON请求内容
+     * @return HTTP响应
+     */
     private HttpResponse postJsonString(String apiName, String jsonString) {
         String url = ragService + apiName;
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json; charset=UTF-8");
         headers.put("Authorization", "Bearer " + ragApiKey);
-        return HttpUtils.doPostJson(url, jsonString, headers);
+        if (AiTaskExecutionContext.getTaskId() == null) {
+            return HttpUtils.doPostJson(url, jsonString, headers);
+        }
+        AiTaskExecutionContext.ensureActive();
+        try {
+            HttpResponse response = HttpUtils.doPostJson(url, jsonString, headers,
+                    request -> AiTaskExecutionContext.registerAbortAction(request::abort));
+            AiTaskExecutionContext.ensureActive();
+            return response;
+        } finally {
+            AiTaskExecutionContext.clearAbortAction();
+        }
     }
 
     private HttpResponse delete(String apiName, Map<String, Object> objectParams) {
@@ -560,7 +581,8 @@ public class RagApiServiceImpl implements IRagApiService {
             String jsonString = objectMapper.writeValueAsString(params);
             String apiName = String.format("/api/v1/chats/%s/completions", chatId);
             String url = ragService + apiName;
-            streamHttpClient.executeStreamPost(url, headers, jsonString, resultHandler, onComplete);
+            AtomicBoolean cancelled = new AtomicBoolean(false);
+            streamHttpClient.executeStreamPost(url, headers, jsonString, resultHandler, onComplete, cancelled);
         } catch (Exception e) {
             log.error("流式提问失败 {}", e);
             if(onError != null) {
@@ -763,5 +785,140 @@ public class RagApiServiceImpl implements IRagApiService {
                         log.error("清理 RAG 资源失败，可能需要手动检查: chatId={}, sessionId={}, error: {}", chatId, sessionId, e);
                     }
                 }));
+    }
+
+    /**
+     * 列出所有的智能体
+     * @return
+     */
+    @Override
+    public List<AgentInfo> listAgents() {
+        List<AgentInfo> agentInfoList = new ArrayList<>();
+        try {
+            String url = "/api/v1/agents";
+            HttpResponse response = get(url, null);
+            if (response.isSuccess()) {
+                String body = response.getBody();
+                JSONObject jsonObject = JSONObject.parseObject(body);
+                if(jsonObject != null && jsonObject.containsKey("code") && jsonObject.getInteger("code").equals(0)) {
+                    //JSONArray agentArr = jsonObject.getJSONArray("data");
+                    //需要兼容新旧版本的写法
+                    //旧版本数组直接在data下，而新版本在data.canvas下
+                    Object data = jsonObject.get("data");
+                    if (data instanceof JSONArray) {
+                        agentInfoList = objectMapper.readValue(data.toString(), new TypeReference<List<AgentInfo>>() {});
+                    } else if (data instanceof JSONObject) {
+                        JSONObject dataObj = (JSONObject) data;
+                        JSONArray canvasArray = dataObj.getJSONArray("canvas");
+                        agentInfoList = objectMapper.readValue(canvasArray.toString(), new TypeReference<List<AgentInfo>>() {});
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("获取数据集列表失败", e);
+        } finally {
+            return agentInfoList;
+        }
+    }
+
+    /**
+     * 调用智能体agent-同步版本
+     * @param agentId: 智能体ID
+     * @param query: 问题
+     * @param inputs: 输入参数
+     * @return 返回答复
+     */
+    // 非流式调用RAGFlow Agent，等待当前父目录正文完整返回
+    @Override
+    public String agent(
+            String agentId,
+            String query,
+            Map<String, Object> inputs
+    ) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            //使用旧接口，agentId放在url里
+            params.put("agent_id", agentId);
+            params.put("query", query);
+            params.put("stream", false);
+            if(inputs != null && !inputs.isEmpty()) {
+                params.put("inputs", inputs);
+            }
+
+            String jsonString = objectMapper.writeValueAsString(params);
+            String apiName = "/api/v1/agents/chat/completions";
+
+            HttpResponse response = postJsonString(apiName, jsonString);
+            if(response != null && response.getStatusCode()==200) {
+                return response.getBody();
+            }
+            return null;
+        } catch (Exception e) {
+            AiTaskExecutionContext.ensureActive();
+            log.error("流式提问失败 {}", e);
+            return null;
+        }
+    }
+
+    /**
+     * 流式调用智能体agent
+     * @param agentId: 智能体ID
+     * @param query: 问题
+     * @param inputs: 输入参数
+     * @param resultHandler: 流式回调
+     * @param onError: 错误回调
+     * @param onComplete: 完成回调
+     * @param cancelled: 取消标志
+     */
+    @Override
+    public void agentStream(
+            String agentId,
+            String query,
+            Map<String, Object> inputs,
+            Function<String, Boolean> resultHandler,
+            Runnable onError,
+            Runnable onComplete,
+            AtomicBoolean cancelled
+    ) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            //使用旧接口，agentId放在url里
+            params.put("agent_id", agentId);
+            params.put("query", query);
+            params.put("stream", true);
+            //关闭思考过程
+            // 1. 关闭思考过程（多种方式尝试）
+            Map<String, Object> chatTemplateKwargs = new HashMap<>();
+            chatTemplateKwargs.put("enable_thinking", false);
+            chatTemplateKwargs.put("thinking", false);
+            params.put("chat_template_kwargs", chatTemplateKwargs);
+
+            // 3. 如果 inputs 为空，创建一个用于传递额外参数
+            if (inputs == null) {
+                inputs = new HashMap<>();
+            }
+
+
+            if(inputs != null && !inputs.isEmpty()) {
+                params.put("inputs", inputs);
+            }
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Content-Type", "application/json");
+            headers.put("Accept", "text/event-stream");
+            headers.put("Connection", "keep-alive");
+            headers.put("Authorization", "Bearer " + ragApiKey);
+
+            String jsonString = objectMapper.writeValueAsString(params);
+            String apiName = "/api/v1/agents/chat/completions";
+            String url = ragService + apiName;
+
+            streamHttpClient.executeStreamPostJson(url, headers, jsonString, resultHandler, onComplete, cancelled);
+        } catch (Exception e) {
+            log.error("流式提问失败 {}", e);
+            if(onError != null) {
+                onError.run();
+            }
+        }
     }
 }

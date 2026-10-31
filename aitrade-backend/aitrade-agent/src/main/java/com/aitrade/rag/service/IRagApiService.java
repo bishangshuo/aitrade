@@ -1,5 +1,6 @@
 package com.aitrade.rag.service;
 
+import com.aitrade.rag.domain.AgentInfo;
 import com.aitrade.rag.domain.DataSet;
 import com.aitrade.rag.domain.vo.RagDocStatusVO;
 import com.aitrade.rag.listener.ParseProgressListener;
@@ -7,6 +8,7 @@ import com.aitrade.rag.listener.ParseResultListener;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 public interface IRagApiService {
@@ -180,5 +182,45 @@ public interface IRagApiService {
             Function<String, Boolean> resultHandler,
             Runnable onError,
             Runnable onComplete
+    );
+
+
+    /**
+     * 列出所有的智能体
+     * @return
+     */
+    List<AgentInfo> listAgents();
+
+    /**
+     * 调用智能体agent-同步版本
+     * @param agentId: 智能体ID
+     * @param query: 问题
+     * @param inputs: 输入参数
+     * @return 返回答复
+     */
+    String agent(
+            String agentId,
+            String query,
+            Map<String, Object> inputs
+    );
+
+    /**
+     * 流式调用智能体agent-流式办不办
+     * @param agentId: 智能体ID
+     * @param query: 问题
+     * @param inputs: 输入参数
+     * @param resultHandler: 流式回调
+     * @param onError: 错误回调
+     * @param onComplete: 完成回调
+     * @param cancelled
+     */
+    void agentStream(
+            String agentId,
+            String query,
+            Map<String, Object> inputs,
+            Function<String, Boolean> resultHandler,
+            Runnable onError,
+            Runnable onComplete,
+            AtomicBoolean cancelled
     );
 }

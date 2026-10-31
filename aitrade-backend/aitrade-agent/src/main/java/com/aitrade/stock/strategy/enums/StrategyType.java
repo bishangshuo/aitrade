@@ -21,4 +21,14 @@ public enum StrategyType {
     public String getDescription() {
         return description;
     }
+
+    /** 通过 code 获取枚举，找不到返回 null */
+    public static StrategyType getByCode(int code) {
+        for (StrategyType type : values()) {
+            if (type.code == code) {
+                return type;
+            }
+        }
+        return null;
+    }
 }

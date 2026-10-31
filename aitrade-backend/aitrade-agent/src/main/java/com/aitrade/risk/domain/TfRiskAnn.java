@@ -66,4 +66,8 @@ public class TfRiskAnn implements Serializable
     @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+
+    //查询时间范围内的数据的参数
+    private Date toDate;
+    private Date fromDate;
 }

@@ -1,6 +1,8 @@
 package com.aitrade.stock.service.impl;
 
 import com.aitrade.common.utils.DateUtils;
+import com.aitrade.risk.domain.TfRiskAnn;
+import com.aitrade.risk.service.ITfRiskAnnService;
 import com.aitrade.stock.domain.StockPickDiagnostic;
 import com.aitrade.stock.domain.vo.HolidayGap;
 import com.aitrade.stock.handler.ActionMessageListener;
@@ -39,6 +41,9 @@ public class BackTestServiceImpl implements IBackTestService {
 
     @Autowired
     private ITaCalService taCalService;
+
+    @Autowired
+    private ITfRiskAnnService tfRiskAnnService;
 
     @Override
     public SseEmitter backTest(LocalDate fromDate, LocalDate toDate) {
@@ -133,6 +138,8 @@ public class BackTestServiceImpl implements IBackTestService {
                 break;
             }
             //过滤黑天鹅时间：下载公司公告，使用ai进行深度复核
+            //List<TfRiskAnn> risk
+
             //获取T+1日到T+5日的stock的分时k线
             TfStock stock = new TfStock();
             stock.setSymbol(stockPickDiagnostic.getSymbol());

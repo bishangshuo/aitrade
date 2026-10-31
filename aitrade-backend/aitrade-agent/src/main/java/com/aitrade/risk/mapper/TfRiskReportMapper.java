@@ -2,6 +2,7 @@ package com.aitrade.risk.mapper;
 
 import java.util.List;
 import com.aitrade.risk.domain.TfRiskReport;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * AI研报Mapper接口
@@ -9,6 +10,7 @@ import com.aitrade.risk.domain.TfRiskReport;
  * @author aitrade
  * @date 2026-10-27
  */
+@Mapper
 public interface TfRiskReportMapper 
 {
     /**

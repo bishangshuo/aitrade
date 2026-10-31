@@ -1,5 +1,7 @@
 package com.aitrade.common.utils.http;
 
+import com.aitrade.common.utils.JsonStreamDetector;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -16,6 +18,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 @Component
@@ -44,7 +47,32 @@ public class StreamHttpClient {
             Map<String, String> headers,
             String jsonBody,
             Function<String, Boolean> dataHandler,
-            Runnable onComplete
+            Runnable onComplete,
+            AtomicBoolean cancelled // 接收参数
+    ) throws IOException {
+        doExecuteStreamPost(false, url, headers, jsonBody, dataHandler, onComplete, cancelled);
+    }
+
+
+    public void executeStreamPostJson(
+            String url,
+            Map<String, String> headers,
+            String jsonBody,
+            Function<String, Boolean> dataHandler,
+            Runnable onComplete,
+            AtomicBoolean cancelled // 接收参数
+    ) throws IOException {
+        doExecuteStreamPost(true, url, headers, jsonBody, dataHandler, onComplete, cancelled);
+    }
+
+    private void doExecuteStreamPost(
+            boolean strictJson,
+            String url,
+            Map<String, String> headers,
+            String jsonBody,
+            Function<String, Boolean> dataHandler,
+            Runnable onComplete,
+            AtomicBoolean cancelled // 接收参数
     ) throws IOException {
 
         HttpPost httpPost = new HttpPost(url);
@@ -81,7 +109,14 @@ public class StreamHttpClient {
             StringBuilder currentDataBuffer = new StringBuilder();
             boolean isProcessingData = false;
 
+            JsonStreamDetector detector = new JsonStreamDetector();
+
             while ((line = reader.readLine()) != null) {
+                // 每次读取一行后，检查是否被取消
+                if (cancelled != null && cancelled.get()) {
+                    log.info("流式请求被外部取消，主动中断: {}", url);
+                    break; // 跳出循环，进入 finally 释放资源
+                }
                 // 1. 处理空行 (SSE 消息分隔符)
                 if (line.trim().isEmpty()) {
                     if (isProcessingData && currentDataBuffer.length() > 0) {
@@ -99,16 +134,73 @@ public class StreamHttpClient {
                     continue;
                 }
 
+                log.info("executeStreamPost 接收到 SSE 数据: " + line);
                 // 2. 处理 data: 行
                 if (line.startsWith("data:")) {
                     isProcessingData = true;
                     String content = line.substring(5).trim();
                     // 累加内容 (防止大 JSON 被拆行，虽然 SSE 通常一行一个)
                     currentDataBuffer.append(content);
+                    //如果检测到content为字符串“{"code": 0, "data": true}”，则立马结束，不要等到连接被系统关闭（太久了）
+                    if(strictJson) {
+                        String answer = JsonStreamDetector.getAnswerFromContent(content);
+                        if(answer != null && !answer.isEmpty()) {
+                            if(detector.feed(answer)) {
+                                log.info("已经接收了完整的json");
+                                break;
+                            }
+                        }
+                    }
+                    try{
+                        /**
+                         * Converse with chat assistant流式完成的最后一个json
+                         * data:{
+                         *     "code": 0,
+                         *     "message": "",
+                         *     "data": true
+                         * }
+                         */
+                        JSONObject contentObj = JSONObject.parseObject(content);
+                        if(contentObj != null && contentObj.containsKey("code") && contentObj.containsKey("data")) {
+                            Integer code = contentObj.getInteger("code");
+                            if(code != null && code.equals(0)) {
+                                if (contentObj.getInteger("code") != null && contentObj.getInteger("code") == 0
+                                        && Boolean.TRUE.equals(contentObj.getBoolean("data"))) {
+                                    log.info("业务层要求停止流式接收");
+                                    break;
+                                }
+                            }
+                        }
+
+                        /**
+                         * Converse with agent流式完成的最后一个json
+                         * data: {
+                         *     "event": "message_end",
+                         *     "message_id": "cecdcb0e83dc11f0858253708ecb6573",
+                         *     "created_at": 1756364483,
+                         *     "task_id": "d1f79142831f11f09cc51795b9eb07c0",
+                         *     "data": {
+                         *         "reference": {}
+                         *     },
+                         *     "session_id": "cd097ca083dc11f0858253708ecb6573"
+                         * }
+                         */
+                        if(contentObj != null && contentObj.containsKey("event")) {
+                            String eventName = contentObj.getString("event");
+                            if(eventName != null && !eventName.isEmpty() && eventName.equals("message_end")) {
+                                log.info("Converse with agent流式完成");
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        //log.error("JSON解析异常");
+                        continue;
+                    }
                 } else if (line.startsWith(":")) {
                     // 注释行，忽略
                     continue;
-                } else {
+                }
+                else {
                     // 非标准行，如果是紧接在 data: 后面可能是续行，否则可能是噪音
                     if (isProcessingData) {
                         currentDataBuffer.append(line);
@@ -128,11 +220,16 @@ public class StreamHttpClient {
             throw e; // 抛出异常让上层感知，或者在这里吞掉异常只通过回调通知
         }
         finally {
-            if (reader != null) {
-                try { reader.close(); } catch (IOException e) { /* ignore */ }
-            }
+            try{
+                httpPost.abort();
+            } catch (Exception e){}
+
             if (response != null) {
                 try { response.close(); } catch (IOException e) { /* ignore */ }
+            }
+
+            if (reader != null) {
+                try { reader.close(); } catch (IOException e) { /* ignore */ }
             }
 
             if (onComplete != null) {

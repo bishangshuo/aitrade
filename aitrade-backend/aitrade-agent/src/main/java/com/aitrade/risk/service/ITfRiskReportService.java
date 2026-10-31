@@ -1,7 +1,13 @@
 package com.aitrade.risk.service;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+
+import com.aitrade.risk.domain.RiskReport;
+import com.aitrade.risk.domain.TfRiskAnn;
 import com.aitrade.risk.domain.TfRiskReport;
+import com.aitrade.stock.domain.StockPickDiagnostic;
 
 /**
  * AI研报Service接口
@@ -58,4 +64,14 @@ public interface ITfRiskReportService
      * @return 结果
      */
     public int deleteTfRiskReportById(Long id);
+
+    void aiTradeReport(
+            AtomicBoolean cancelled,
+            StockPickDiagnostic stockPickDiagnostic,
+            List<TfRiskAnn> tfRiskAnnList,
+            Function<String, Boolean> streamHandler,
+            Function<RiskReport, Boolean> resultHandler,
+            Runnable onError
+    );
+
 }

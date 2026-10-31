@@ -535,6 +535,20 @@ public class HttpUtils
      * @return 响应内容
      */
     public static HttpResponse doPostJson(String url, String json, Map<String, String> headers) {
+        return doPostJson(url, json, headers, null);
+    }
+
+    /**
+     * 执行JSON请求，并允许调用方在发送前登记可中止的HTTP请求。
+     *
+     * @param url 请求地址
+     * @param json JSON字符串
+     * @param headers 请求头
+     * @param requestCallback 可选的请求登记动作，用于取消阻塞请求
+     * @return 响应内容
+     */
+    public static HttpResponse doPostJson(String url, String json, Map<String, String> headers,
+                                          java.util.function.Consumer<HttpPost> requestCallback) {
         CloseableHttpClient httpClient = null;
         CloseableHttpResponse response = null;
         HttpResponse result = null;
@@ -559,14 +573,18 @@ public class HttpUtils
                 httpPost.setEntity(stringEntity);
             }
 
-            // 执行请求
+            // 登记请求后再执行，调用方可通过HttpPost.abort()关闭阻塞中的连接。
+            if (requestCallback != null) {
+                requestCallback.accept(httpPost);
+            }
             response = httpClient.execute(httpPost);
 
-            // 获取响应实体
             HttpEntity entity = response.getEntity();
             if (entity != null) {
                 result = new HttpResponse(response.getStatusLine().getStatusCode(), EntityUtils.toString(entity, StandardCharsets.UTF_8));
             }
+        } catch (java.util.concurrent.CancellationException cancelled) {
+            throw cancelled;
         } catch (Exception e) {
             log.error("POST JSON请求出错: {}", e.getMessage(), e);
         } finally {

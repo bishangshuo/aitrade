@@ -1,7 +1,27 @@
 package com.aitrade.risk.service.impl;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+
 import com.aitrade.common.utils.DateUtils;
+import com.aitrade.common.utils.JsonStreamDetector;
+import com.aitrade.rag.component.AgentContainer;
+import com.aitrade.rag.enums.AgentEnum;
+import com.aitrade.rag.enums.AgentParamType;
+import com.aitrade.rag.service.IRagApiService;
+import com.aitrade.rag.utils.AgentParamBuilder;
+import com.aitrade.risk.domain.RiskReport;
+import com.aitrade.risk.domain.TfRiskAnn;
+import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.strategy.enums.StrategyType;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.aitrade.risk.mapper.TfRiskReportMapper;
@@ -15,10 +35,18 @@ import com.aitrade.risk.service.ITfRiskReportService;
  * @date 2026-10-27
  */
 @Service
+@Slf4j
 public class TfRiskReportServiceImpl implements ITfRiskReportService 
 {
     @Autowired
     private TfRiskReportMapper tfRiskReportMapper;
+
+    @Autowired
+    private IRagApiService ragApiService;
+    @Autowired
+    private AgentContainer agentContainer;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 查询AI研报
@@ -92,4 +120,78 @@ public class TfRiskReportServiceImpl implements ITfRiskReportService
     {
         return tfRiskReportMapper.deleteTfRiskReportById(id);
     }
+
+    @Override
+    public void aiTradeReport(
+            AtomicBoolean cancelled,
+        StockPickDiagnostic stockPickDiagnostic,
+        List<TfRiskAnn> tfRiskAnnList,
+        Function<String, Boolean> streamHandler,
+        Function<RiskReport, Boolean> resultHandler,
+        Runnable onError
+    ) {
+        try {
+            String agentId = agentContainer.getAgentId(AgentEnum.AGENT_FILTER_RISK_ANNOUNCE.getTitle());
+            Map<String, Object> inputs = new HashMap<>();
+
+            String query = "";
+
+            DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            String tradeDate = stockPickDiagnostic.getTradeDate().format(FORMATTER);
+            String strategyType = StrategyType.getByCode(stockPickDiagnostic.getStrategyCode()).getDescription();
+            String riskAnnouce = objectMapper.writeValueAsString(tfRiskAnnList);
+            String stockPickDiagnosticContent = objectMapper.writeValueAsString(stockPickDiagnostic);
+
+            AgentParamBuilder.makeAgentInputParam("stockCode", AgentParamType.LINE.getCode(), stockPickDiagnostic.getSymbol(), inputs);
+            AgentParamBuilder.makeAgentInputParam("stockName", AgentParamType.LINE.getCode(), stockPickDiagnostic.getStockName(), inputs);
+            AgentParamBuilder.makeAgentInputParam("tradeDate", AgentParamType.LINE.getCode(), tradeDate, inputs);
+            AgentParamBuilder.makeAgentInputParam("strategyType", AgentParamType.LINE.getCode(), strategyType, inputs);
+            AgentParamBuilder.makeAgentInputParam("riskAnnouce", AgentParamType.JSON.getCode(), riskAnnouce, inputs);
+            AgentParamBuilder.makeAgentInputParam("stockPickDiagnostic", AgentParamType.JSON.getCode(), stockPickDiagnosticContent, inputs);
+
+            StringBuffer buffer = new StringBuffer();
+            ragApiService.agentStream(
+                    agentId,
+                    query,
+                    inputs,
+                    content -> {
+                        String answer = JsonStreamDetector.getMessageFromAgentData(content);
+                        if (answer == null || answer.isEmpty()) {
+                            return true;
+                        }
+                        buffer.append(answer);
+
+                        if(streamHandler != null) {
+                            streamHandler.apply(answer);
+                        }
+                        return true;
+                    },
+                    () -> {
+                        if(onError != null) {
+                            onError.run();
+                        }
+                    },
+                    () -> {
+                        String result = buffer.toString();
+                        RiskReport report = null;
+                        try {
+                             report = objectMapper.readValue(result, RiskReport.class);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                        if(resultHandler != null) {
+                            resultHandler.apply(report);
+                        }
+                    },
+                    cancelled
+            );
+        }
+        catch (Exception e) {
+            log.error("ai复核失败: {}", e);
+            if(onError != null) {
+                onError.run();
+            }
+        }
+    }
+
 }

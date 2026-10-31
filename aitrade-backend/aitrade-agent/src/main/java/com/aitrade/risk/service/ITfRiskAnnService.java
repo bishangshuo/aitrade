@@ -1,5 +1,6 @@
 package com.aitrade.risk.service;
 
+import java.util.Date;
 import java.util.List;
 import com.aitrade.risk.domain.TfRiskAnn;
 
@@ -60,7 +61,14 @@ public interface ITfRiskAnnService
     public int deleteTfRiskAnnById(Long id);
 
     /**
-     * 从东方财富网获取某个股票最新的50条风险公告
+     * 从东方财富网获取某个股票从某个日期开始往前、30天内count条风险公告
+      * @param stockCode 股票代码
+      * @param fromDate 开始日期，
+     *                 传入的是T交易日当天的最后时间，如：2026-06-09 23:59:59,
+     *                 但是，在回测中，传入的是T+1交易日的盘前时间，如本例中的2026-06-10 09:15:00,这样就能在回测中真实过滤隔夜黑天鹤
+      * @param period 获取天数区间
+      * @param count 获取条数
+     *
      */
-    public List<TfRiskAnn> getRiskAnnFromEastMoney(String stockCode);
+    public List<TfRiskAnn> getRiskAnnFromEastMoneyBackward(String stockCode, Date fromDate, int period, int count);
 }
