@@ -161,4 +161,9 @@ public class TaCalServiceImpl implements ITaCalService
 
         return null;
     }
+
+    @Override
+    public Date getNextTradeDate(Date currentDate) {
+        return null;
+    }
 }

@@ -69,4 +69,11 @@ public interface ITaCalService
      */
 
     public HolidayGap isLongHolidayAhead(Date date);
+
+    /**
+     * 获取下一个交易日的日期
+     * @param currentDate
+     * @return
+     */
+    public Date getNextTradeDate(Date currentDate);
 }

@@ -87,7 +87,7 @@ spring:
         password: 123456
 rag:
     api:
-        service: http://192.168.0.60:8013
+        service: http://192.168.0.60:8018
         key: ragflow-XsujZbPkeVoBpB2Cp6Nf1aPQG_sxo3O9C7WPCX48lbg
 
 

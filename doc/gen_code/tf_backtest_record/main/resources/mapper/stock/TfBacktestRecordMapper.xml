@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfBacktestRecordMapper">
+    
+    <resultMap type="TfBacktestRecord" id="TfBacktestRecordResult">
+        <result property="id"    column="id"    />
+        <result property="code"    column="code"    />
+        <result property="name"    column="name"    />
+        <result property="fromDate"    column="from_date"    />
+        <result property="toDate"    column="to_date"    />
+        <result property="cnfStrongBreakoutId"    column="cnf_strong_breakout_id"    />
+        <result property="cnfBottomPullbackId"    column="cnf_bottom_pullback_id"    />
+        <result property="cnfPullbackLowSuckId"    column="cnf_pullback_low_suck_id"    />
+        <result property="cnfOversoldReboundId"    column="cnf_oversold_rebound_id"    />
+        <result property="cnfTradeId"    column="cnf_trade_id"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTfBacktestRecordVo">
+        select id, code, name, from_date, to_date, cnf_strong_breakout_id, cnf_bottom_pullback_id, cnf_pullback_low_suck_id, cnf_oversold_rebound_id, cnf_trade_id, create_time, update_time from tf_backtest_record
+    </sql>
+
+    <select id="selectTfBacktestRecordList" parameterType="TfBacktestRecord" resultMap="TfBacktestRecordResult">
+        <include refid="selectTfBacktestRecordVo"/>
+        <where>  
+            <if test="code != null  and code != ''"> and code = #{code}</if>
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="fromDate != null "> and from_date = #{fromDate}</if>
+            <if test="toDate != null "> and to_date = #{toDate}</if>
+            <if test="cnfStrongBreakoutId != null "> and cnf_strong_breakout_id = #{cnfStrongBreakoutId}</if>
+            <if test="cnfBottomPullbackId != null "> and cnf_bottom_pullback_id = #{cnfBottomPullbackId}</if>
+            <if test="cnfPullbackLowSuckId != null "> and cnf_pullback_low_suck_id = #{cnfPullbackLowSuckId}</if>
+            <if test="cnfOversoldReboundId != null "> and cnf_oversold_rebound_id = #{cnfOversoldReboundId}</if>
+            <if test="cnfTradeId != null "> and cnf_trade_id = #{cnfTradeId}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfBacktestRecordById" parameterType="Long" resultMap="TfBacktestRecordResult">
+        <include refid="selectTfBacktestRecordVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfBacktestRecord" parameterType="TfBacktestRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_backtest_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="code != null and code != ''">code,</if>
+            <if test="name != null and name != ''">name,</if>
+            <if test="fromDate != null">from_date,</if>
+            <if test="toDate != null">to_date,</if>
+            <if test="cnfStrongBreakoutId != null">cnf_strong_breakout_id,</if>
+            <if test="cnfBottomPullbackId != null">cnf_bottom_pullback_id,</if>
+            <if test="cnfPullbackLowSuckId != null">cnf_pullback_low_suck_id,</if>
+            <if test="cnfOversoldReboundId != null">cnf_oversold_rebound_id,</if>
+            <if test="cnfTradeId != null">cnf_trade_id,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="code != null and code != ''">#{code},</if>
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="fromDate != null">#{fromDate},</if>
+            <if test="toDate != null">#{toDate},</if>
+            <if test="cnfStrongBreakoutId != null">#{cnfStrongBreakoutId},</if>
+            <if test="cnfBottomPullbackId != null">#{cnfBottomPullbackId},</if>
+            <if test="cnfPullbackLowSuckId != null">#{cnfPullbackLowSuckId},</if>
+            <if test="cnfOversoldReboundId != null">#{cnfOversoldReboundId},</if>
+            <if test="cnfTradeId != null">#{cnfTradeId},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfBacktestRecord" parameterType="TfBacktestRecord">
+        update tf_backtest_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="code != null and code != ''">code = #{code},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="fromDate != null">from_date = #{fromDate},</if>
+            <if test="toDate != null">to_date = #{toDate},</if>
+            <if test="cnfStrongBreakoutId != null">cnf_strong_breakout_id = #{cnfStrongBreakoutId},</if>
+            <if test="cnfBottomPullbackId != null">cnf_bottom_pullback_id = #{cnfBottomPullbackId},</if>
+            <if test="cnfPullbackLowSuckId != null">cnf_pullback_low_suck_id = #{cnfPullbackLowSuckId},</if>
+            <if test="cnfOversoldReboundId != null">cnf_oversold_rebound_id = #{cnfOversoldReboundId},</if>
+            <if test="cnfTradeId != null">cnf_trade_id = #{cnfTradeId},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfBacktestRecordById" parameterType="Long">
+        delete from tf_backtest_record where id = #{id}
+    </delete>
+
+    <delete id="deleteTfBacktestRecordByIds" parameterType="String">
+        delete from tf_backtest_record where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

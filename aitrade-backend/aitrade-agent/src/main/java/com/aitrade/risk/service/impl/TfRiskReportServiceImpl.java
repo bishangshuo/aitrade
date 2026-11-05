@@ -140,7 +140,7 @@ public class TfRiskReportServiceImpl implements ITfRiskReportService
             String tradeDate = stockPickDiagnostic.getTradeDate().format(FORMATTER);
             String strategyType = StrategyType.getByCode(stockPickDiagnostic.getStrategyCode()).getDescription();
             String riskAnnouce = objectMapper.writeValueAsString(tfRiskAnnList);
-            String stockPickDiagnosticContent = objectMapper.writeValueAsString(stockPickDiagnostic);
+            String stockPickDiagnosticContent = stockPickDiagnostic.buildSummaryText();
 
             AgentParamBuilder.makeAgentInputParam("stockCode", AgentParamType.LINE.getCode(), stockPickDiagnostic.getSymbol(), inputs);
             AgentParamBuilder.makeAgentInputParam("stockName", AgentParamType.LINE.getCode(), stockPickDiagnostic.getStockName(), inputs);

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfConfigStrategyBottomBreakoutMapper">
+    
+    <resultMap type="TfConfigStrategyBottomBreakout" id="TfConfigStrategyBottomBreakoutResult">
+        <result property="id"    column="id"    />
+        <result property="configName"    column="config_name"    />
+        <result property="strategyCode"    column="strategy_code"    />
+        <result property="strategyName"    column="strategy_name"    />
+        <result property="minKlineCount"    column="min_kline_count"    />
+        <result property="trendLookbackDays"    column="trend_lookback_days"    />
+        <result property="trendMaxPositionRatio"    column="trend_max_position_ratio"    />
+        <result property="trendMaWindow"    column="trend_ma_window"    />
+        <result property="trendPrevMaOffset"    column="trend_prev_ma_offset"    />
+        <result property="trendMaFlatMultiplier"    column="trend_ma_flat_multiplier"    />
+        <result property="vpMinChangeRate"    column="vp_min_change_rate"    />
+        <result property="vpMinVolRatio"    column="vp_min_vol_ratio"    />
+        <result property="vpVolMaWindow"    column="vp_vol_ma_window"    />
+        <result property="vpShortMaWindow"    column="vp_short_ma_window"    />
+        <result property="vpLongMaWindow"    column="vp_long_ma_window"    />
+        <result property="momKdjN"    column="mom_kdj_n"    />
+        <result property="momKdjM1"    column="mom_kdj_m1"    />
+        <result property="momKdjM2"    column="mom_kdj_m2"    />
+        <result property="momKdjThreshold"    column="mom_kdj_threshold"    />
+        <result property="momRsiPeriod"    column="mom_rsi_period"    />
+        <result property="momRsiYesterdayMax"    column="mom_rsi_yesterday_max"    />
+        <result property="momRsiTodayMin"    column="mom_rsi_today_min"    />
+        <result property="momMacdLookback"    column="mom_macd_lookback"    />
+        <result property="chipMinProfitRatio"    column="chip_min_profit_ratio"    />
+        <result property="swTrendWeight"    column="sw_trend_weight"    />
+        <result property="swVolumeWeight"    column="sw_volume_weight"    />
+        <result property="swMomentumWeight"    column="sw_momentum_weight"    />
+        <result property="swChipWeight"    column="sw_chip_weight"    />
+        <result property="swDefaultMomentumScore"    column="sw_default_momentum_score"    />
+        <result property="swDefaultChipScore"    column="sw_default_chip_score"    />
+        <result property="swSinglePeakBonus"    column="sw_single_peak_bonus"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectTfConfigStrategyBottomBreakoutVo">
+        select id, config_name, strategy_code, strategy_name, min_kline_count, trend_lookback_days, trend_max_position_ratio, trend_ma_window, trend_prev_ma_offset, trend_ma_flat_multiplier, vp_min_change_rate, vp_min_vol_ratio, vp_vol_ma_window, vp_short_ma_window, vp_long_ma_window, mom_kdj_n, mom_kdj_m1, mom_kdj_m2, mom_kdj_threshold, mom_rsi_period, mom_rsi_yesterday_max, mom_rsi_today_min, mom_macd_lookback, chip_min_profit_ratio, sw_trend_weight, sw_volume_weight, sw_momentum_weight, sw_chip_weight, sw_default_momentum_score, sw_default_chip_score, sw_single_peak_bonus, create_time from tf_config_strategy_bottom_breakout
+    </sql>
+
+    <select id="selectTfConfigStrategyBottomBreakoutList" parameterType="TfConfigStrategyBottomBreakout" resultMap="TfConfigStrategyBottomBreakoutResult">
+        <include refid="selectTfConfigStrategyBottomBreakoutVo"/>
+        <where>  
+            <if test="configName != null  and configName != ''"> and config_name like concat('%', #{configName}, '%')</if>
+            <if test="strategyCode != null "> and strategy_code = #{strategyCode}</if>
+            <if test="strategyName != null  and strategyName != ''"> and strategy_name like concat('%', #{strategyName}, '%')</if>
+            <if test="minKlineCount != null "> and min_kline_count = #{minKlineCount}</if>
+            <if test="trendLookbackDays != null "> and trend_lookback_days = #{trendLookbackDays}</if>
+            <if test="trendMaxPositionRatio != null "> and trend_max_position_ratio = #{trendMaxPositionRatio}</if>
+            <if test="trendMaWindow != null "> and trend_ma_window = #{trendMaWindow}</if>
+            <if test="trendPrevMaOffset != null "> and trend_prev_ma_offset = #{trendPrevMaOffset}</if>
+            <if test="trendMaFlatMultiplier != null "> and trend_ma_flat_multiplier = #{trendMaFlatMultiplier}</if>
+            <if test="vpMinChangeRate != null "> and vp_min_change_rate = #{vpMinChangeRate}</if>
+            <if test="vpMinVolRatio != null "> and vp_min_vol_ratio = #{vpMinVolRatio}</if>
+            <if test="vpVolMaWindow != null "> and vp_vol_ma_window = #{vpVolMaWindow}</if>
+            <if test="vpShortMaWindow != null "> and vp_short_ma_window = #{vpShortMaWindow}</if>
+            <if test="vpLongMaWindow != null "> and vp_long_ma_window = #{vpLongMaWindow}</if>
+            <if test="momKdjN != null "> and mom_kdj_n = #{momKdjN}</if>
+            <if test="momKdjM1 != null "> and mom_kdj_m1 = #{momKdjM1}</if>
+            <if test="momKdjM2 != null "> and mom_kdj_m2 = #{momKdjM2}</if>
+            <if test="momKdjThreshold != null "> and mom_kdj_threshold = #{momKdjThreshold}</if>
+            <if test="momRsiPeriod != null "> and mom_rsi_period = #{momRsiPeriod}</if>
+            <if test="momRsiYesterdayMax != null "> and mom_rsi_yesterday_max = #{momRsiYesterdayMax}</if>
+            <if test="momRsiTodayMin != null "> and mom_rsi_today_min = #{momRsiTodayMin}</if>
+            <if test="momMacdLookback != null "> and mom_macd_lookback = #{momMacdLookback}</if>
+            <if test="chipMinProfitRatio != null "> and chip_min_profit_ratio = #{chipMinProfitRatio}</if>
+            <if test="swTrendWeight != null "> and sw_trend_weight = #{swTrendWeight}</if>
+            <if test="swVolumeWeight != null "> and sw_volume_weight = #{swVolumeWeight}</if>
+            <if test="swMomentumWeight != null "> and sw_momentum_weight = #{swMomentumWeight}</if>
+            <if test="swChipWeight != null "> and sw_chip_weight = #{swChipWeight}</if>
+            <if test="swDefaultMomentumScore != null "> and sw_default_momentum_score = #{swDefaultMomentumScore}</if>
+            <if test="swDefaultChipScore != null "> and sw_default_chip_score = #{swDefaultChipScore}</if>
+            <if test="swSinglePeakBonus != null "> and sw_single_peak_bonus = #{swSinglePeakBonus}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfConfigStrategyBottomBreakoutById" parameterType="Long" resultMap="TfConfigStrategyBottomBreakoutResult">
+        <include refid="selectTfConfigStrategyBottomBreakoutVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfConfigStrategyBottomBreakout" parameterType="TfConfigStrategyBottomBreakout" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_config_strategy_bottom_breakout
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name,</if>
+            <if test="strategyCode != null">strategy_code,</if>
+            <if test="strategyName != null">strategy_name,</if>
+            <if test="minKlineCount != null">min_kline_count,</if>
+            <if test="trendLookbackDays != null">trend_lookback_days,</if>
+            <if test="trendMaxPositionRatio != null">trend_max_position_ratio,</if>
+            <if test="trendMaWindow != null">trend_ma_window,</if>
+            <if test="trendPrevMaOffset != null">trend_prev_ma_offset,</if>
+            <if test="trendMaFlatMultiplier != null">trend_ma_flat_multiplier,</if>
+            <if test="vpMinChangeRate != null">vp_min_change_rate,</if>
+            <if test="vpMinVolRatio != null">vp_min_vol_ratio,</if>
+            <if test="vpVolMaWindow != null">vp_vol_ma_window,</if>
+            <if test="vpShortMaWindow != null">vp_short_ma_window,</if>
+            <if test="vpLongMaWindow != null">vp_long_ma_window,</if>
+            <if test="momKdjN != null">mom_kdj_n,</if>
+            <if test="momKdjM1 != null">mom_kdj_m1,</if>
+            <if test="momKdjM2 != null">mom_kdj_m2,</if>
+            <if test="momKdjThreshold != null">mom_kdj_threshold,</if>
+            <if test="momRsiPeriod != null">mom_rsi_period,</if>
+            <if test="momRsiYesterdayMax != null">mom_rsi_yesterday_max,</if>
+            <if test="momRsiTodayMin != null">mom_rsi_today_min,</if>
+            <if test="momMacdLookback != null">mom_macd_lookback,</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio,</if>
+            <if test="swTrendWeight != null">sw_trend_weight,</if>
+            <if test="swVolumeWeight != null">sw_volume_weight,</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight,</if>
+            <if test="swChipWeight != null">sw_chip_weight,</if>
+            <if test="swDefaultMomentumScore != null">sw_default_momentum_score,</if>
+            <if test="swDefaultChipScore != null">sw_default_chip_score,</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">#{configName},</if>
+            <if test="strategyCode != null">#{strategyCode},</if>
+            <if test="strategyName != null">#{strategyName},</if>
+            <if test="minKlineCount != null">#{minKlineCount},</if>
+            <if test="trendLookbackDays != null">#{trendLookbackDays},</if>
+            <if test="trendMaxPositionRatio != null">#{trendMaxPositionRatio},</if>
+            <if test="trendMaWindow != null">#{trendMaWindow},</if>
+            <if test="trendPrevMaOffset != null">#{trendPrevMaOffset},</if>
+            <if test="trendMaFlatMultiplier != null">#{trendMaFlatMultiplier},</if>
+            <if test="vpMinChangeRate != null">#{vpMinChangeRate},</if>
+            <if test="vpMinVolRatio != null">#{vpMinVolRatio},</if>
+            <if test="vpVolMaWindow != null">#{vpVolMaWindow},</if>
+            <if test="vpShortMaWindow != null">#{vpShortMaWindow},</if>
+            <if test="vpLongMaWindow != null">#{vpLongMaWindow},</if>
+            <if test="momKdjN != null">#{momKdjN},</if>
+            <if test="momKdjM1 != null">#{momKdjM1},</if>
+            <if test="momKdjM2 != null">#{momKdjM2},</if>
+            <if test="momKdjThreshold != null">#{momKdjThreshold},</if>
+            <if test="momRsiPeriod != null">#{momRsiPeriod},</if>
+            <if test="momRsiYesterdayMax != null">#{momRsiYesterdayMax},</if>
+            <if test="momRsiTodayMin != null">#{momRsiTodayMin},</if>
+            <if test="momMacdLookback != null">#{momMacdLookback},</if>
+            <if test="chipMinProfitRatio != null">#{chipMinProfitRatio},</if>
+            <if test="swTrendWeight != null">#{swTrendWeight},</if>
+            <if test="swVolumeWeight != null">#{swVolumeWeight},</if>
+            <if test="swMomentumWeight != null">#{swMomentumWeight},</if>
+            <if test="swChipWeight != null">#{swChipWeight},</if>
+            <if test="swDefaultMomentumScore != null">#{swDefaultMomentumScore},</if>
+            <if test="swDefaultChipScore != null">#{swDefaultChipScore},</if>
+            <if test="swSinglePeakBonus != null">#{swSinglePeakBonus},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfConfigStrategyBottomBreakout" parameterType="TfConfigStrategyBottomBreakout">
+        update tf_config_strategy_bottom_breakout
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name = #{configName},</if>
+            <if test="strategyCode != null">strategy_code = #{strategyCode},</if>
+            <if test="strategyName != null">strategy_name = #{strategyName},</if>
+            <if test="minKlineCount != null">min_kline_count = #{minKlineCount},</if>
+            <if test="trendLookbackDays != null">trend_lookback_days = #{trendLookbackDays},</if>
+            <if test="trendMaxPositionRatio != null">trend_max_position_ratio = #{trendMaxPositionRatio},</if>
+            <if test="trendMaWindow != null">trend_ma_window = #{trendMaWindow},</if>
+            <if test="trendPrevMaOffset != null">trend_prev_ma_offset = #{trendPrevMaOffset},</if>
+            <if test="trendMaFlatMultiplier != null">trend_ma_flat_multiplier = #{trendMaFlatMultiplier},</if>
+            <if test="vpMinChangeRate != null">vp_min_change_rate = #{vpMinChangeRate},</if>
+            <if test="vpMinVolRatio != null">vp_min_vol_ratio = #{vpMinVolRatio},</if>
+            <if test="vpVolMaWindow != null">vp_vol_ma_window = #{vpVolMaWindow},</if>
+            <if test="vpShortMaWindow != null">vp_short_ma_window = #{vpShortMaWindow},</if>
+            <if test="vpLongMaWindow != null">vp_long_ma_window = #{vpLongMaWindow},</if>
+            <if test="momKdjN != null">mom_kdj_n = #{momKdjN},</if>
+            <if test="momKdjM1 != null">mom_kdj_m1 = #{momKdjM1},</if>
+            <if test="momKdjM2 != null">mom_kdj_m2 = #{momKdjM2},</if>
+            <if test="momKdjThreshold != null">mom_kdj_threshold = #{momKdjThreshold},</if>
+            <if test="momRsiPeriod != null">mom_rsi_period = #{momRsiPeriod},</if>
+            <if test="momRsiYesterdayMax != null">mom_rsi_yesterday_max = #{momRsiYesterdayMax},</if>
+            <if test="momRsiTodayMin != null">mom_rsi_today_min = #{momRsiTodayMin},</if>
+            <if test="momMacdLookback != null">mom_macd_lookback = #{momMacdLookback},</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio = #{chipMinProfitRatio},</if>
+            <if test="swTrendWeight != null">sw_trend_weight = #{swTrendWeight},</if>
+            <if test="swVolumeWeight != null">sw_volume_weight = #{swVolumeWeight},</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight = #{swMomentumWeight},</if>
+            <if test="swChipWeight != null">sw_chip_weight = #{swChipWeight},</if>
+            <if test="swDefaultMomentumScore != null">sw_default_momentum_score = #{swDefaultMomentumScore},</if>
+            <if test="swDefaultChipScore != null">sw_default_chip_score = #{swDefaultChipScore},</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus = #{swSinglePeakBonus},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfConfigStrategyBottomBreakoutById" parameterType="Long">
+        delete from tf_config_strategy_bottom_breakout where id = #{id}
+    </delete>
+
+    <delete id="deleteTfConfigStrategyBottomBreakoutByIds" parameterType="String">
+        delete from tf_config_strategy_bottom_breakout where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfConfigStrategyOversoldReboundMapper">
+    
+    <resultMap type="TfConfigStrategyOversoldRebound" id="TfConfigStrategyOversoldReboundResult">
+        <result property="id"    column="id"    />
+        <result property="configName"    column="config_name"    />
+        <result property="strategyCode"    column="strategy_code"    />
+        <result property="strategyName"    column="strategy_name"    />
+        <result property="minKlineCount"    column="min_kline_count"    />
+        <result property="trendMaShortWindow"    column="trend_ma_short_window"    />
+        <result property="trendMaLongWindow"    column="trend_ma_long_window"    />
+        <result property="biasMaxThreshold"    column="bias_max_threshold"    />
+        <result property="momRsi6Threshold"    column="mom_rsi6_threshold"    />
+        <result property="momRsi14Threshold"    column="mom_rsi14_threshold"    />
+        <result property="momKdjN"    column="mom_kdj_n"    />
+        <result property="momKdjM1"    column="mom_kdj_m1"    />
+        <result property="momKdjM2"    column="mom_kdj_m2"    />
+        <result property="momKdjLowThreshold"    column="mom_kdj_low_threshold"    />
+        <result property="vpVolMaWindow"    column="vp_vol_ma_window"    />
+        <result property="vpMinVolRatio"    column="vp_min_vol_ratio"    />
+        <result property="vpHammerShadowRatio"    column="vp_hammer_shadow_ratio"    />
+        <result property="vpMinChangeRate"    column="vp_min_change_rate"    />
+        <result property="chipMinProfitRatio"    column="chip_min_profit_ratio"    />
+        <result property="swBiasWeight"    column="sw_bias_weight"    />
+        <result property="swVolumeWeight"    column="sw_volume_weight"    />
+        <result property="swMomentumWeight"    column="sw_momentum_weight"    />
+        <result property="swChipWeight"    column="sw_chip_weight"    />
+        <result property="biasScoreMultiplier"    column="bias_score_multiplier"    />
+        <result property="biasScoreMin"    column="bias_score_min"    />
+        <result property="biasScoreMax"    column="bias_score_max"    />
+        <result property="swDefaultMomentumScore"    column="sw_default_momentum_score"    />
+        <result property="swDefaultChipScore"    column="sw_default_chip_score"    />
+        <result property="swSinglePeakBonus"    column="sw_single_peak_bonus"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectTfConfigStrategyOversoldReboundVo">
+        select id, config_name, strategy_code, strategy_name, min_kline_count, trend_ma_short_window, trend_ma_long_window, bias_max_threshold, mom_rsi6_threshold, mom_rsi14_threshold, mom_kdj_n, mom_kdj_m1, mom_kdj_m2, mom_kdj_low_threshold, vp_vol_ma_window, vp_min_vol_ratio, vp_hammer_shadow_ratio, vp_min_change_rate, chip_min_profit_ratio, sw_bias_weight, sw_volume_weight, sw_momentum_weight, sw_chip_weight, bias_score_multiplier, bias_score_min, bias_score_max, sw_default_momentum_score, sw_default_chip_score, sw_single_peak_bonus, create_time from tf_config_strategy_oversold_rebound
+    </sql>
+
+    <select id="selectTfConfigStrategyOversoldReboundList" parameterType="TfConfigStrategyOversoldRebound" resultMap="TfConfigStrategyOversoldReboundResult">
+        <include refid="selectTfConfigStrategyOversoldReboundVo"/>
+        <where>  
+            <if test="configName != null  and configName != ''"> and config_name like concat('%', #{configName}, '%')</if>
+            <if test="strategyCode != null "> and strategy_code = #{strategyCode}</if>
+            <if test="strategyName != null  and strategyName != ''"> and strategy_name like concat('%', #{strategyName}, '%')</if>
+            <if test="minKlineCount != null "> and min_kline_count = #{minKlineCount}</if>
+            <if test="trendMaShortWindow != null "> and trend_ma_short_window = #{trendMaShortWindow}</if>
+            <if test="trendMaLongWindow != null "> and trend_ma_long_window = #{trendMaLongWindow}</if>
+            <if test="biasMaxThreshold != null "> and bias_max_threshold = #{biasMaxThreshold}</if>
+            <if test="momRsi6Threshold != null "> and mom_rsi6_threshold = #{momRsi6Threshold}</if>
+            <if test="momRsi14Threshold != null "> and mom_rsi14_threshold = #{momRsi14Threshold}</if>
+            <if test="momKdjN != null "> and mom_kdj_n = #{momKdjN}</if>
+            <if test="momKdjM1 != null "> and mom_kdj_m1 = #{momKdjM1}</if>
+            <if test="momKdjM2 != null "> and mom_kdj_m2 = #{momKdjM2}</if>
+            <if test="momKdjLowThreshold != null "> and mom_kdj_low_threshold = #{momKdjLowThreshold}</if>
+            <if test="vpVolMaWindow != null "> and vp_vol_ma_window = #{vpVolMaWindow}</if>
+            <if test="vpMinVolRatio != null "> and vp_min_vol_ratio = #{vpMinVolRatio}</if>
+            <if test="vpHammerShadowRatio != null "> and vp_hammer_shadow_ratio = #{vpHammerShadowRatio}</if>
+            <if test="vpMinChangeRate != null "> and vp_min_change_rate = #{vpMinChangeRate}</if>
+            <if test="chipMinProfitRatio != null "> and chip_min_profit_ratio = #{chipMinProfitRatio}</if>
+            <if test="swBiasWeight != null "> and sw_bias_weight = #{swBiasWeight}</if>
+            <if test="swVolumeWeight != null "> and sw_volume_weight = #{swVolumeWeight}</if>
+            <if test="swMomentumWeight != null "> and sw_momentum_weight = #{swMomentumWeight}</if>
+            <if test="swChipWeight != null "> and sw_chip_weight = #{swChipWeight}</if>
+            <if test="biasScoreMultiplier != null "> and bias_score_multiplier = #{biasScoreMultiplier}</if>
+            <if test="biasScoreMin != null "> and bias_score_min = #{biasScoreMin}</if>
+            <if test="biasScoreMax != null "> and bias_score_max = #{biasScoreMax}</if>
+            <if test="swDefaultMomentumScore != null "> and sw_default_momentum_score = #{swDefaultMomentumScore}</if>
+            <if test="swDefaultChipScore != null "> and sw_default_chip_score = #{swDefaultChipScore}</if>
+            <if test="swSinglePeakBonus != null "> and sw_single_peak_bonus = #{swSinglePeakBonus}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfConfigStrategyOversoldReboundById" parameterType="Long" resultMap="TfConfigStrategyOversoldReboundResult">
+        <include refid="selectTfConfigStrategyOversoldReboundVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfConfigStrategyOversoldRebound" parameterType="TfConfigStrategyOversoldRebound" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_config_strategy_oversold_rebound
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name,</if>
+            <if test="strategyCode != null">strategy_code,</if>
+            <if test="strategyName != null">strategy_name,</if>
+            <if test="minKlineCount != null">min_kline_count,</if>
+            <if test="trendMaShortWindow != null">trend_ma_short_window,</if>
+            <if test="trendMaLongWindow != null">trend_ma_long_window,</if>
+            <if test="biasMaxThreshold != null">bias_max_threshold,</if>
+            <if test="momRsi6Threshold != null">mom_rsi6_threshold,</if>
+            <if test="momRsi14Threshold != null">mom_rsi14_threshold,</if>
+            <if test="momKdjN != null">mom_kdj_n,</if>
+            <if test="momKdjM1 != null">mom_kdj_m1,</if>
+            <if test="momKdjM2 != null">mom_kdj_m2,</if>
+            <if test="momKdjLowThreshold != null">mom_kdj_low_threshold,</if>
+            <if test="vpVolMaWindow != null">vp_vol_ma_window,</if>
+            <if test="vpMinVolRatio != null">vp_min_vol_ratio,</if>
+            <if test="vpHammerShadowRatio != null">vp_hammer_shadow_ratio,</if>
+            <if test="vpMinChangeRate != null">vp_min_change_rate,</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio,</if>
+            <if test="swBiasWeight != null">sw_bias_weight,</if>
+            <if test="swVolumeWeight != null">sw_volume_weight,</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight,</if>
+            <if test="swChipWeight != null">sw_chip_weight,</if>
+            <if test="biasScoreMultiplier != null">bias_score_multiplier,</if>
+            <if test="biasScoreMin != null">bias_score_min,</if>
+            <if test="biasScoreMax != null">bias_score_max,</if>
+            <if test="swDefaultMomentumScore != null">sw_default_momentum_score,</if>
+            <if test="swDefaultChipScore != null">sw_default_chip_score,</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">#{configName},</if>
+            <if test="strategyCode != null">#{strategyCode},</if>
+            <if test="strategyName != null">#{strategyName},</if>
+            <if test="minKlineCount != null">#{minKlineCount},</if>
+            <if test="trendMaShortWindow != null">#{trendMaShortWindow},</if>
+            <if test="trendMaLongWindow != null">#{trendMaLongWindow},</if>
+            <if test="biasMaxThreshold != null">#{biasMaxThreshold},</if>
+            <if test="momRsi6Threshold != null">#{momRsi6Threshold},</if>
+            <if test="momRsi14Threshold != null">#{momRsi14Threshold},</if>
+            <if test="momKdjN != null">#{momKdjN},</if>
+            <if test="momKdjM1 != null">#{momKdjM1},</if>
+            <if test="momKdjM2 != null">#{momKdjM2},</if>
+            <if test="momKdjLowThreshold != null">#{momKdjLowThreshold},</if>
+            <if test="vpVolMaWindow != null">#{vpVolMaWindow},</if>
+            <if test="vpMinVolRatio != null">#{vpMinVolRatio},</if>
+            <if test="vpHammerShadowRatio != null">#{vpHammerShadowRatio},</if>
+            <if test="vpMinChangeRate != null">#{vpMinChangeRate},</if>
+            <if test="chipMinProfitRatio != null">#{chipMinProfitRatio},</if>
+            <if test="swBiasWeight != null">#{swBiasWeight},</if>
+            <if test="swVolumeWeight != null">#{swVolumeWeight},</if>
+            <if test="swMomentumWeight != null">#{swMomentumWeight},</if>
+            <if test="swChipWeight != null">#{swChipWeight},</if>
+            <if test="biasScoreMultiplier != null">#{biasScoreMultiplier},</if>
+            <if test="biasScoreMin != null">#{biasScoreMin},</if>
+            <if test="biasScoreMax != null">#{biasScoreMax},</if>
+            <if test="swDefaultMomentumScore != null">#{swDefaultMomentumScore},</if>
+            <if test="swDefaultChipScore != null">#{swDefaultChipScore},</if>
+            <if test="swSinglePeakBonus != null">#{swSinglePeakBonus},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfConfigStrategyOversoldRebound" parameterType="TfConfigStrategyOversoldRebound">
+        update tf_config_strategy_oversold_rebound
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name = #{configName},</if>
+            <if test="strategyCode != null">strategy_code = #{strategyCode},</if>
+            <if test="strategyName != null">strategy_name = #{strategyName},</if>
+            <if test="minKlineCount != null">min_kline_count = #{minKlineCount},</if>
+            <if test="trendMaShortWindow != null">trend_ma_short_window = #{trendMaShortWindow},</if>
+            <if test="trendMaLongWindow != null">trend_ma_long_window = #{trendMaLongWindow},</if>
+            <if test="biasMaxThreshold != null">bias_max_threshold = #{biasMaxThreshold},</if>
+            <if test="momRsi6Threshold != null">mom_rsi6_threshold = #{momRsi6Threshold},</if>
+            <if test="momRsi14Threshold != null">mom_rsi14_threshold = #{momRsi14Threshold},</if>
+            <if test="momKdjN != null">mom_kdj_n = #{momKdjN},</if>
+            <if test="momKdjM1 != null">mom_kdj_m1 = #{momKdjM1},</if>
+            <if test="momKdjM2 != null">mom_kdj_m2 = #{momKdjM2},</if>
+            <if test="momKdjLowThreshold != null">mom_kdj_low_threshold = #{momKdjLowThreshold},</if>
+            <if test="vpVolMaWindow != null">vp_vol_ma_window = #{vpVolMaWindow},</if>
+            <if test="vpMinVolRatio != null">vp_min_vol_ratio = #{vpMinVolRatio},</if>
+            <if test="vpHammerShadowRatio != null">vp_hammer_shadow_ratio = #{vpHammerShadowRatio},</if>
+            <if test="vpMinChangeRate != null">vp_min_change_rate = #{vpMinChangeRate},</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio = #{chipMinProfitRatio},</if>
+            <if test="swBiasWeight != null">sw_bias_weight = #{swBiasWeight},</if>
+            <if test="swVolumeWeight != null">sw_volume_weight = #{swVolumeWeight},</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight = #{swMomentumWeight},</if>
+            <if test="swChipWeight != null">sw_chip_weight = #{swChipWeight},</if>
+            <if test="biasScoreMultiplier != null">bias_score_multiplier = #{biasScoreMultiplier},</if>
+            <if test="biasScoreMin != null">bias_score_min = #{biasScoreMin},</if>
+            <if test="biasScoreMax != null">bias_score_max = #{biasScoreMax},</if>
+            <if test="swDefaultMomentumScore != null">sw_default_momentum_score = #{swDefaultMomentumScore},</if>
+            <if test="swDefaultChipScore != null">sw_default_chip_score = #{swDefaultChipScore},</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus = #{swSinglePeakBonus},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfConfigStrategyOversoldReboundById" parameterType="Long">
+        delete from tf_config_strategy_oversold_rebound where id = #{id}
+    </delete>
+
+    <delete id="deleteTfConfigStrategyOversoldReboundByIds" parameterType="String">
+        delete from tf_config_strategy_oversold_rebound where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -395,4 +395,6 @@ public class OversoldReboundStrategy implements StockPickerStrategy {
         BigDecimal hundred = new BigDecimal("100");
         return hundred.subtract(hundred.divide(BigDecimal.ONE.add(rs), 6, RoundingMode.HALF_UP));
     }
+
+
 }

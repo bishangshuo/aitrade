@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfConfigStrategyStrongBreakoutMapper">
+    
+    <resultMap type="TfConfigStrategyStrongBreakout" id="TfConfigStrategyStrongBreakoutResult">
+        <result property="id"    column="id"    />
+        <result property="configName"    column="config_name"    />
+        <result property="strategyCode"    column="strategy_code"    />
+        <result property="strategyName"    column="strategy_name"    />
+        <result property="minKlineCount"    column="min_kline_count"    />
+        <result property="vcpLookbackDays"    column="vcp_lookback_days"    />
+        <result property="vcpMaxAmplitude"    column="vcp_max_amplitude"    />
+        <result property="vcpMinChangeRate"    column="vcp_min_change_rate"    />
+        <result property="vcpMinVolRatio"    column="vcp_min_vol_ratio"    />
+        <result property="vcpHighLookback"    column="vcp_high_lookback"    />
+        <result property="coilMaxDiffRatio"    column="coil_max_diff_ratio"    />
+        <result property="airRefuelMaTolerance"    column="air_refuel_ma_tolerance"    />
+        <result property="macdNearZeroLimit"    column="macd_near_zero_limit"    />
+        <result property="kdjN"    column="kdj_n"    />
+        <result property="kdjM1"    column="kdj_m1"    />
+        <result property="kdjM2"    column="kdj_m2"    />
+        <result property="kdjMinStrong"    column="kdj_min_strong"    />
+        <result property="kdjMaxStrong"    column="kdj_max_strong"    />
+        <result property="rsiPeriod"    column="rsi_period"    />
+        <result property="rsiMin"    column="rsi_min"    />
+        <result property="rsiMax"    column="rsi_max"    />
+        <result property="obvLookbackDays"    column="obv_lookback_days"    />
+        <result property="chipMinProfitRatio"    column="chip_min_profit_ratio"    />
+        <result property="swVolumeWeight"    column="sw_volume_weight"    />
+        <result property="swChipWeight"    column="sw_chip_weight"    />
+        <result property="swMomentumWeight"    column="sw_momentum_weight"    />
+        <result property="swPatternWeight"    column="sw_pattern_weight"    />
+        <result property="swSinglePeakBonus"    column="sw_single_peak_bonus"    />
+        <result property="swMacdHighScore"    column="sw_macd_high_score"    />
+        <result property="swMacdMidScore"    column="sw_macd_mid_score"    />
+        <result property="swPatternDefaultScore"    column="sw_pattern_default_score"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectTfConfigStrategyStrongBreakoutVo">
+        select id, config_name, strategy_code, strategy_name, min_kline_count, vcp_lookback_days, vcp_max_amplitude, vcp_min_change_rate, vcp_min_vol_ratio, vcp_high_lookback, coil_max_diff_ratio, air_refuel_ma_tolerance, macd_near_zero_limit, kdj_n, kdj_m1, kdj_m2, kdj_min_strong, kdj_max_strong, rsi_period, rsi_min, rsi_max, obv_lookback_days, chip_min_profit_ratio, sw_volume_weight, sw_chip_weight, sw_momentum_weight, sw_pattern_weight, sw_single_peak_bonus, sw_macd_high_score, sw_macd_mid_score, sw_pattern_default_score, create_time from tf_config_strategy_strong_breakout
+    </sql>
+
+    <select id="selectTfConfigStrategyStrongBreakoutList" parameterType="TfConfigStrategyStrongBreakout" resultMap="TfConfigStrategyStrongBreakoutResult">
+        <include refid="selectTfConfigStrategyStrongBreakoutVo"/>
+        <where>  
+            <if test="configName != null  and configName != ''"> and config_name like concat('%', #{configName}, '%')</if>
+            <if test="strategyCode != null "> and strategy_code = #{strategyCode}</if>
+            <if test="strategyName != null  and strategyName != ''"> and strategy_name like concat('%', #{strategyName}, '%')</if>
+            <if test="minKlineCount != null "> and min_kline_count = #{minKlineCount}</if>
+            <if test="vcpLookbackDays != null "> and vcp_lookback_days = #{vcpLookbackDays}</if>
+            <if test="vcpMaxAmplitude != null "> and vcp_max_amplitude = #{vcpMaxAmplitude}</if>
+            <if test="vcpMinChangeRate != null "> and vcp_min_change_rate = #{vcpMinChangeRate}</if>
+            <if test="vcpMinVolRatio != null "> and vcp_min_vol_ratio = #{vcpMinVolRatio}</if>
+            <if test="vcpHighLookback != null "> and vcp_high_lookback = #{vcpHighLookback}</if>
+            <if test="coilMaxDiffRatio != null "> and coil_max_diff_ratio = #{coilMaxDiffRatio}</if>
+            <if test="airRefuelMaTolerance != null "> and air_refuel_ma_tolerance = #{airRefuelMaTolerance}</if>
+            <if test="macdNearZeroLimit != null "> and macd_near_zero_limit = #{macdNearZeroLimit}</if>
+            <if test="kdjN != null "> and kdj_n = #{kdjN}</if>
+            <if test="kdjM1 != null "> and kdj_m1 = #{kdjM1}</if>
+            <if test="kdjM2 != null "> and kdj_m2 = #{kdjM2}</if>
+            <if test="kdjMinStrong != null "> and kdj_min_strong = #{kdjMinStrong}</if>
+            <if test="kdjMaxStrong != null "> and kdj_max_strong = #{kdjMaxStrong}</if>
+            <if test="rsiPeriod != null "> and rsi_period = #{rsiPeriod}</if>
+            <if test="rsiMin != null "> and rsi_min = #{rsiMin}</if>
+            <if test="rsiMax != null "> and rsi_max = #{rsiMax}</if>
+            <if test="obvLookbackDays != null "> and obv_lookback_days = #{obvLookbackDays}</if>
+            <if test="chipMinProfitRatio != null "> and chip_min_profit_ratio = #{chipMinProfitRatio}</if>
+            <if test="swVolumeWeight != null "> and sw_volume_weight = #{swVolumeWeight}</if>
+            <if test="swChipWeight != null "> and sw_chip_weight = #{swChipWeight}</if>
+            <if test="swMomentumWeight != null "> and sw_momentum_weight = #{swMomentumWeight}</if>
+            <if test="swPatternWeight != null "> and sw_pattern_weight = #{swPatternWeight}</if>
+            <if test="swSinglePeakBonus != null "> and sw_single_peak_bonus = #{swSinglePeakBonus}</if>
+            <if test="swMacdHighScore != null "> and sw_macd_high_score = #{swMacdHighScore}</if>
+            <if test="swMacdMidScore != null "> and sw_macd_mid_score = #{swMacdMidScore}</if>
+            <if test="swPatternDefaultScore != null "> and sw_pattern_default_score = #{swPatternDefaultScore}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfConfigStrategyStrongBreakoutById" parameterType="Long" resultMap="TfConfigStrategyStrongBreakoutResult">
+        <include refid="selectTfConfigStrategyStrongBreakoutVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfConfigStrategyStrongBreakout" parameterType="TfConfigStrategyStrongBreakout" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_config_strategy_strong_breakout
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name,</if>
+            <if test="strategyCode != null">strategy_code,</if>
+            <if test="strategyName != null">strategy_name,</if>
+            <if test="minKlineCount != null">min_kline_count,</if>
+            <if test="vcpLookbackDays != null">vcp_lookback_days,</if>
+            <if test="vcpMaxAmplitude != null">vcp_max_amplitude,</if>
+            <if test="vcpMinChangeRate != null">vcp_min_change_rate,</if>
+            <if test="vcpMinVolRatio != null">vcp_min_vol_ratio,</if>
+            <if test="vcpHighLookback != null">vcp_high_lookback,</if>
+            <if test="coilMaxDiffRatio != null">coil_max_diff_ratio,</if>
+            <if test="airRefuelMaTolerance != null">air_refuel_ma_tolerance,</if>
+            <if test="macdNearZeroLimit != null">macd_near_zero_limit,</if>
+            <if test="kdjN != null">kdj_n,</if>
+            <if test="kdjM1 != null">kdj_m1,</if>
+            <if test="kdjM2 != null">kdj_m2,</if>
+            <if test="kdjMinStrong != null">kdj_min_strong,</if>
+            <if test="kdjMaxStrong != null">kdj_max_strong,</if>
+            <if test="rsiPeriod != null">rsi_period,</if>
+            <if test="rsiMin != null">rsi_min,</if>
+            <if test="rsiMax != null">rsi_max,</if>
+            <if test="obvLookbackDays != null">obv_lookback_days,</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio,</if>
+            <if test="swVolumeWeight != null">sw_volume_weight,</if>
+            <if test="swChipWeight != null">sw_chip_weight,</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight,</if>
+            <if test="swPatternWeight != null">sw_pattern_weight,</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus,</if>
+            <if test="swMacdHighScore != null">sw_macd_high_score,</if>
+            <if test="swMacdMidScore != null">sw_macd_mid_score,</if>
+            <if test="swPatternDefaultScore != null">sw_pattern_default_score,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="configName != null and configName != ''">#{configName},</if>
+            <if test="strategyCode != null">#{strategyCode},</if>
+            <if test="strategyName != null">#{strategyName},</if>
+            <if test="minKlineCount != null">#{minKlineCount},</if>
+            <if test="vcpLookbackDays != null">#{vcpLookbackDays},</if>
+            <if test="vcpMaxAmplitude != null">#{vcpMaxAmplitude},</if>
+            <if test="vcpMinChangeRate != null">#{vcpMinChangeRate},</if>
+            <if test="vcpMinVolRatio != null">#{vcpMinVolRatio},</if>
+            <if test="vcpHighLookback != null">#{vcpHighLookback},</if>
+            <if test="coilMaxDiffRatio != null">#{coilMaxDiffRatio},</if>
+            <if test="airRefuelMaTolerance != null">#{airRefuelMaTolerance},</if>
+            <if test="macdNearZeroLimit != null">#{macdNearZeroLimit},</if>
+            <if test="kdjN != null">#{kdjN},</if>
+            <if test="kdjM1 != null">#{kdjM1},</if>
+            <if test="kdjM2 != null">#{kdjM2},</if>
+            <if test="kdjMinStrong != null">#{kdjMinStrong},</if>
+            <if test="kdjMaxStrong != null">#{kdjMaxStrong},</if>
+            <if test="rsiPeriod != null">#{rsiPeriod},</if>
+            <if test="rsiMin != null">#{rsiMin},</if>
+            <if test="rsiMax != null">#{rsiMax},</if>
+            <if test="obvLookbackDays != null">#{obvLookbackDays},</if>
+            <if test="chipMinProfitRatio != null">#{chipMinProfitRatio},</if>
+            <if test="swVolumeWeight != null">#{swVolumeWeight},</if>
+            <if test="swChipWeight != null">#{swChipWeight},</if>
+            <if test="swMomentumWeight != null">#{swMomentumWeight},</if>
+            <if test="swPatternWeight != null">#{swPatternWeight},</if>
+            <if test="swSinglePeakBonus != null">#{swSinglePeakBonus},</if>
+            <if test="swMacdHighScore != null">#{swMacdHighScore},</if>
+            <if test="swMacdMidScore != null">#{swMacdMidScore},</if>
+            <if test="swPatternDefaultScore != null">#{swPatternDefaultScore},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfConfigStrategyStrongBreakout" parameterType="TfConfigStrategyStrongBreakout">
+        update tf_config_strategy_strong_breakout
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="configName != null and configName != ''">config_name = #{configName},</if>
+            <if test="strategyCode != null">strategy_code = #{strategyCode},</if>
+            <if test="strategyName != null">strategy_name = #{strategyName},</if>
+            <if test="minKlineCount != null">min_kline_count = #{minKlineCount},</if>
+            <if test="vcpLookbackDays != null">vcp_lookback_days = #{vcpLookbackDays},</if>
+            <if test="vcpMaxAmplitude != null">vcp_max_amplitude = #{vcpMaxAmplitude},</if>
+            <if test="vcpMinChangeRate != null">vcp_min_change_rate = #{vcpMinChangeRate},</if>
+            <if test="vcpMinVolRatio != null">vcp_min_vol_ratio = #{vcpMinVolRatio},</if>
+            <if test="vcpHighLookback != null">vcp_high_lookback = #{vcpHighLookback},</if>
+            <if test="coilMaxDiffRatio != null">coil_max_diff_ratio = #{coilMaxDiffRatio},</if>
+            <if test="airRefuelMaTolerance != null">air_refuel_ma_tolerance = #{airRefuelMaTolerance},</if>
+            <if test="macdNearZeroLimit != null">macd_near_zero_limit = #{macdNearZeroLimit},</if>
+            <if test="kdjN != null">kdj_n = #{kdjN},</if>
+            <if test="kdjM1 != null">kdj_m1 = #{kdjM1},</if>
+            <if test="kdjM2 != null">kdj_m2 = #{kdjM2},</if>
+            <if test="kdjMinStrong != null">kdj_min_strong = #{kdjMinStrong},</if>
+            <if test="kdjMaxStrong != null">kdj_max_strong = #{kdjMaxStrong},</if>
+            <if test="rsiPeriod != null">rsi_period = #{rsiPeriod},</if>
+            <if test="rsiMin != null">rsi_min = #{rsiMin},</if>
+            <if test="rsiMax != null">rsi_max = #{rsiMax},</if>
+            <if test="obvLookbackDays != null">obv_lookback_days = #{obvLookbackDays},</if>
+            <if test="chipMinProfitRatio != null">chip_min_profit_ratio = #{chipMinProfitRatio},</if>
+            <if test="swVolumeWeight != null">sw_volume_weight = #{swVolumeWeight},</if>
+            <if test="swChipWeight != null">sw_chip_weight = #{swChipWeight},</if>
+            <if test="swMomentumWeight != null">sw_momentum_weight = #{swMomentumWeight},</if>
+            <if test="swPatternWeight != null">sw_pattern_weight = #{swPatternWeight},</if>
+            <if test="swSinglePeakBonus != null">sw_single_peak_bonus = #{swSinglePeakBonus},</if>
+            <if test="swMacdHighScore != null">sw_macd_high_score = #{swMacdHighScore},</if>
+            <if test="swMacdMidScore != null">sw_macd_mid_score = #{swMacdMidScore},</if>
+            <if test="swPatternDefaultScore != null">sw_pattern_default_score = #{swPatternDefaultScore},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfConfigStrategyStrongBreakoutById" parameterType="Long">
+        delete from tf_config_strategy_strong_breakout where id = #{id}
+    </delete>
+
+    <delete id="deleteTfConfigStrategyStrongBreakoutByIds" parameterType="String">
+        delete from tf_config_strategy_strong_breakout where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
