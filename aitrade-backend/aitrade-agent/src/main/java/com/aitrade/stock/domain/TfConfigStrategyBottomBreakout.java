@@ -26,7 +26,7 @@ public class TfConfigStrategyBottomBreakout extends BaseEntity
 
     /** 策略编码 */
     @Excel(name = "策略编码")
-    private Long strategyCode;
+    private Integer strategyCode;
 
     /** 策略名称 */
     @Excel(name = "策略名称")
@@ -160,12 +160,12 @@ public class TfConfigStrategyBottomBreakout extends BaseEntity
         return configName;
     }
 
-    public void setStrategyCode(Long strategyCode) 
+    public void setStrategyCode(Integer strategyCode)
     {
         this.strategyCode = strategyCode;
     }
 
-    public Long getStrategyCode() 
+    public Integer getStrategyCode()
     {
         return strategyCode;
     }

@@ -20,6 +20,10 @@ public class TfConfigStrategyTrade extends BaseEntity
     /** $column.columnComment */
     private Long id;
 
+    /** 配置名称 */
+    @Excel(name = "配置名称")
+    private String configName;
+
     /** T+1高开幅度上限 */
     @Excel(name = "T+1高开幅度上限")
     private BigDecimal t1HighOpenRatio;
@@ -27,6 +31,10 @@ public class TfConfigStrategyTrade extends BaseEntity
     /** 持仓天数 */
     @Excel(name = "持仓天数")
     private Long holdDays;
+
+    /** 止损方法:1固定幅度，2动态幅度 */
+    @Excel(name = "止损方法:1固定幅度，2动态幅度")
+    private Integer stopLossMethod;
 
     /** 止损幅度 */
     @Excel(name = "止损幅度")
@@ -50,6 +58,16 @@ public class TfConfigStrategyTrade extends BaseEntity
         return id;
     }
 
+    public void setConfigName(String configName)
+    {
+        this.configName = configName;
+    }
+
+    public String getConfigName()
+    {
+        return configName;
+    }
+
     public void setT1HighOpenRatio(BigDecimal t1HighOpenRatio) 
     {
         this.t1HighOpenRatio = t1HighOpenRatio;
@@ -68,6 +86,16 @@ public class TfConfigStrategyTrade extends BaseEntity
     public Long getHoldDays() 
     {
         return holdDays;
+    }
+
+    public void setStopLossMethod(Integer stopLossMethod)
+    {
+        this.stopLossMethod = stopLossMethod;
+    }
+
+    public Integer getStopLossMethod()
+    {
+        return stopLossMethod;
     }
 
     public void setStopLossRatio(BigDecimal stopLossRatio) 
@@ -104,8 +132,10 @@ public class TfConfigStrategyTrade extends BaseEntity
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
+            .append("configName", getConfigName())
             .append("t1HighOpenRatio", getT1HighOpenRatio())
             .append("holdDays", getHoldDays())
+            .append("stopLossMethod", getStopLossMethod())
             .append("stopLossRatio", getStopLossRatio())
             .append("stopProfitMethod", getStopProfitMethod())
             .append("stopProfitRatio", getStopProfitRatio())
