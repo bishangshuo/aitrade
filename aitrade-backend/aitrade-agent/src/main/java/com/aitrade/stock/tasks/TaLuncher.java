@@ -72,7 +72,7 @@ public class TaLuncher {
 
     private void launchTask(TaTask task, AtomicBoolean isRunning) {
         LocalDate klineDate = task.getStartBeginTime().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-        stockTaService.startTA(klineDate, isRunning, new DayTaResultListener() {
+        stockTaService.startTA(null, klineDate, isRunning, new DayTaResultListener() {
             @Override
             public void onComplete() {
                 log.info("Ta任务{}完成", task.getId());
@@ -82,8 +82,6 @@ public class TaLuncher {
             public void stockSelectResult(TfStock stock, StockPickDiagnostic diagnostic) {
 
             }
-
-
         });
     }
 }

@@ -190,6 +190,12 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils
         return Date.from(zdt.toInstant());
     }
 
+    public static LocalDate toLocalDate(Date date) {
+        return date.toInstant()
+                .atZone(ZoneId.systemDefault())   // 或者用 ZoneId.of("Asia/Shanghai")
+                .toLocalDate();
+    }
+
     public static String formatLocalDateTime(LocalDateTime localDateTime) {
         return localDateTime.format(STANDARD_FORMATTER);
     }

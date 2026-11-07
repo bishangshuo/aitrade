@@ -44,6 +44,12 @@ public class TfTradeExecution extends BaseEntity
     @Excel(name = "交易方向：BUY-買入, SELL-賣出")
     private String tradeSide;
 
+    /** 交易原因
+     * 交易原因，当交易方向为卖出时，此代码表示卖出原因，profit止盈卖出，loss止损卖出，timeout到期卖出
+     * */
+    @Excel(name = "交易原因")
+    private String tradeReason;
+
     /** 成交價格 */
     @Excel(name = "成交價格")
     private BigDecimal tradePrice;

@@ -1,5 +1,6 @@
 package com.aitrade.stock.service;
 
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.handler.DayTaResultListener;
 
 import java.time.LocalDate;
@@ -20,5 +21,5 @@ public interface IStockTaService {
      * @param date
      * @param isRunning
      */
-    void startTA(LocalDate date, AtomicBoolean isRunning, DayTaResultListener listener);
+    void startTA(TfBacktestRecord backtestRecord, LocalDate date, AtomicBoolean isRunning, DayTaResultListener listener);
 }

@@ -2,6 +2,7 @@ package com.aitrade.stock.service.impl;
 
 import com.aitrade.stock.domain.MarketRegimeResult;
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.handler.StockTaCompleteListener;
 import com.aitrade.stock.handler.DayTaResultListener;
 import com.aitrade.stock.mapper.StockPickDiagnosticMapper;
@@ -59,10 +60,10 @@ public class StockTaServiceImpl implements IStockTaService {
     @Override
     public void startTA(AtomicBoolean isRunning, DayTaResultListener listener) {
         LocalDate date = LocalDate.now();
-        startTA(date, isRunning, listener);
+        startTA(null, date, isRunning, listener);
     }
     @Override
-    public void startTA(LocalDate date, AtomicBoolean isRunning, DayTaResultListener dayTaResultListener) {
+    public void startTA(TfBacktestRecord backtestRecord, LocalDate date, AtomicBoolean isRunning, DayTaResultListener dayTaResultListener) {
         //获取所有股票标识
         List<TfStock> stockList = tfStockRepository.findAll();
         if(stockList == null || stockList.isEmpty()) {

@@ -2,6 +2,7 @@ package com.aitrade.stock.mapper;
 
 import java.util.List;
 import com.aitrade.stock.domain.TfTradeExecution;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 回測歷史成交交割單Mapper接口
@@ -9,6 +10,7 @@ import com.aitrade.stock.domain.TfTradeExecution;
  * @author aitrade
  * @date 2026-10-25
  */
+@Mapper
 public interface TfTradeExecutionMapper 
 {
     /**

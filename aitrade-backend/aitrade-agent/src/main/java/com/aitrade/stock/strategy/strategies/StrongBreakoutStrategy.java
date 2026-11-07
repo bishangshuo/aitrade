@@ -66,7 +66,8 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
             String symbol,
             String stockName,
             LocalDate tradeDate,
-            List<TfKline> klines, StockAnalysisContext context
+            List<TfKline> klines,
+            StockAnalysisContext context
     ) {
         // 初始化診斷構建器，預設標記為未通過
         StockPickDiagnostic.StockPickDiagnosticBuilder builder = StockPickDiagnostic.builder()
@@ -167,6 +168,9 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
         // ==========================================
         calculateAndSetScores(builder, changeRate, volRatio, context, macdToday);
 
+        // 【新增】計算未來 5 天目標價與止損價
+        calculateAndSetTargetPrices(klines, lastIdx, matchVcp, matchMaCoil, matchAirRefuel, builder);
+
         // 最終標記為通過篩選
         return builder.passed(1)
                 .failReason(null)
@@ -181,8 +185,13 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
      * 1.1 窄幅橫盤突破形態 (VCP - Volatility Contraction Pattern)
      * 條件：前期 10 日振幅收窄 < 10%，當日漲幅 >= 3%，放量突破 2 倍 5 日均量，且突破前高。
      */
-    private boolean checkVcpBreakout(List<TfKline> klines, int endIdx, BigDecimal changeRate,
-                                     BigDecimal volMa5, StockPickDiagnostic.StockPickDiagnosticBuilder builder) {
+    private boolean checkVcpBreakout(
+            List<TfKline> klines,
+            int endIdx,
+            BigDecimal changeRate,
+            BigDecimal volMa5,
+            StockPickDiagnostic.StockPickDiagnosticBuilder builder
+    ) {
         if (changeRate.doubleValue() < 0.03) return false;
 
         // 計算前 10 個交易日的最高價與最低價振幅
@@ -209,7 +218,10 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
      * 1.2 均線多頭粘合與突破形態
      * 條件：MA5, MA10, MA20, MA30 昨日高度粘合（極差小於 2.5%），當日一陽穿多線且 MA5 金叉 MA10。
      */
-    private boolean checkMaCoilBreakout(List<TfKline> klines, int endIdx) {
+    private boolean checkMaCoilBreakout(
+            List<TfKline> klines,
+            int endIdx
+    ) {
         TfKline today = klines.get(endIdx);
         BigDecimal ma5 = calculateMA(klines, endIdx, 5);
         BigDecimal ma10 = calculateMA(klines, endIdx, 10);
@@ -502,5 +514,85 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
 
         BigDecimal hundred = new BigDecimal("100");
         return hundred.subtract(hundred.divide(BigDecimal.ONE.add(rs), 6, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * 核心測算方法：根據不同突破形態與波動率（ATR），預測未來 5 個交易日的目標價與防守止損價
+     */
+    private void calculateAndSetTargetPrices(
+            List<TfKline> klines,
+            int endIdx,
+            boolean matchVcp,
+            boolean matchMaCoil,
+            boolean matchAirRefuel,
+            StockPickDiagnostic.StockPickDiagnosticBuilder builder
+    ) {
+        TfKline today = klines.get(endIdx);
+        BigDecimal close = today.getClose();
+
+        // 1. 計算 14 日 ATR（平均真實波幅），用於衡量當前股票的活躍震盪空間
+        BigDecimal atr14 = calculateATR(klines, endIdx, 14);
+        if (atr14.compareTo(BigDecimal.ZERO) == 0) {
+            atr14 = close.multiply(new BigDecimal("0.03")); // 預設 3% 作為防禦值
+        }
+
+        BigDecimal targetPrice;
+        BigDecimal stopLossPrice;
+
+        // 2. 根據不同形態套用不同的主升浪測距模型
+        if (matchVcp) {
+            // VCP 突破：爆發力強，通常以 1.5 ~ 2 倍 ATR 配合成交量倍數延伸
+            // 目標價 = 今日收盤價 + (ATR * 2.2)
+            targetPrice = close.add(atr14.multiply(new BigDecimal("2.2")));
+            // 止損價設定在突破當日低點下方或 5 日線附近
+            stopLossPrice = today.getLow().min(calculateMA(klines, endIdx, 5));
+
+        } else if (matchMaCoil) {
+            // 均線粘合突破：屬於蓄勢待發後的展開，空間較平穩
+            // 目標價 = 今日收盤價 + (ATR * 1.8)
+            targetPrice = close.add(atr14.multiply(new BigDecimal("1.8")));
+            // 止損價設定在粘合均線下方（如 MA20）
+            stopLossPrice = calculateMA(klines, endIdx, 20);
+
+        } else if (matchAirRefuel) {
+            // 空中加油（洗盤反包）：爆發速度快，以昨日低點到今日高點的振幅做 1:1 等距測算
+            TfKline yesterday = klines.get(endIdx - 1);
+            BigDecimal refuelHeight = today.getClose().subtract(yesterday.getLow());
+            targetPrice = close.add(refuelHeight.max(atr14.multiply(new BigDecimal("2.0"))));
+            // 止損價設定在昨日洗盤低點
+            stopLossPrice = yesterday.getLow();
+
+        } else {
+            // 預設綜合模型
+            targetPrice = close.add(atr14.multiply(new BigDecimal("2.0")));
+            stopLossPrice = close.subtract(atr14.multiply(new BigDecimal("1.5")));
+        }
+
+        // 3. 將計算結果寫入 Diagnostics 實體（需確保 StockPickDiagnostic 包含對應 setter/builder）
+        builder.targetPrice5d(targetPrice.setScale(2, RoundingMode.HALF_UP))
+                .stopLossPrice(stopLossPrice.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * 計算 ATR (Average True Range) 平均真實波幅
+     */
+    private BigDecimal calculateATR(List<TfKline> klines, int endIdx, int period) {
+        if (endIdx < period) {
+            return klines.get(endIdx).getClose().multiply(new BigDecimal("0.03"));
+        }
+        BigDecimal trSum = BigDecimal.ZERO;
+        int start = Math.max(1, endIdx - period + 1);
+        for (int i = start; i <= endIdx; i++) {
+            TfKline curr = klines.get(i);
+            TfKline prev = klines.get(i - 1);
+
+            BigDecimal highLow = curr.getHigh().subtract(curr.getLow());
+            BigDecimal highPrevClose = curr.getHigh().subtract(prev.getClose()).abs();
+            BigDecimal lowPrevClose = curr.getLow().subtract(prev.getClose()).abs();
+
+            BigDecimal trueRange = highLow.max(highPrevClose).max(lowPrevClose);
+            trSum = trSum.add(trueRange);
+        }
+        return trSum.divide(BigDecimal.valueOf(period), 4, RoundingMode.HALF_UP);
     }
 }

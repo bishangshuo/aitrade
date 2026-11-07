@@ -11,6 +11,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="symbol"    column="symbol"    />
         <result property="stockName"    column="stock_name"    />
         <result property="tradeSide"    column="trade_side"    />
+        <result property="tradeReason"    column="trade_reason"    />
         <result property="tradePrice"    column="trade_price"    />
         <result property="tradeVolume"    column="trade_volume"    />
         <result property="tradeAmount"    column="trade_amount"    />
@@ -22,7 +23,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTfTradeExecutionVo">
-        select id, account_no, order_id, symbol, stock_name, trade_side, trade_price, trade_volume, trade_amount, commission, tax, realized_pnl, trade_time, create_time from tf_trade_execution
+        select id, account_no, order_id, symbol, stock_name, trade_side, trade_reason, trade_price, trade_volume, trade_amount, commission, tax, realized_pnl, trade_time, create_time from tf_trade_execution
     </sql>
 
     <select id="selectTfTradeExecutionList" parameterType="TfTradeExecution" resultMap="TfTradeExecutionResult">
@@ -33,6 +34,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="symbol != null  and symbol != ''"> and symbol = #{symbol}</if>
             <if test="stockName != null  and stockName != ''"> and stock_name like concat('%', #{stockName}, '%')</if>
             <if test="tradeSide != null  and tradeSide != ''"> and trade_side = #{tradeSide}</if>
+            <if test="tradeReason != null  and tradeReason != ''"> and trade_reason = #{tradeReason}</if>
             <if test="tradePrice != null "> and trade_price = #{tradePrice}</if>
             <if test="tradeVolume != null "> and trade_volume = #{tradeVolume}</if>
             <if test="tradeAmount != null "> and trade_amount = #{tradeAmount}</if>
@@ -56,6 +58,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="symbol != null and symbol != ''">symbol,</if>
             <if test="stockName != null and stockName != ''">stock_name,</if>
             <if test="tradeSide != null and tradeSide != ''">trade_side,</if>
+            <if test="tradeReason != null and tradeReason != ''">trade_reason,</if>
             <if test="tradePrice != null">trade_price,</if>
             <if test="tradeVolume != null">trade_volume,</if>
             <if test="tradeAmount != null">trade_amount,</if>
@@ -71,6 +74,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="symbol != null and symbol != ''">#{symbol},</if>
             <if test="stockName != null and stockName != ''">#{stockName},</if>
             <if test="tradeSide != null and tradeSide != ''">#{tradeSide},</if>
+            <if test="tradeReason != null and tradeReason != ''">#{tradeReason},</if>
             <if test="tradePrice != null">#{tradePrice},</if>
             <if test="tradeVolume != null">#{tradeVolume},</if>
             <if test="tradeAmount != null">#{tradeAmount},</if>
@@ -90,6 +94,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="symbol != null and symbol != ''">symbol = #{symbol},</if>
             <if test="stockName != null and stockName != ''">stock_name = #{stockName},</if>
             <if test="tradeSide != null and tradeSide != ''">trade_side = #{tradeSide},</if>
+            <if test="tradeReason != null and tradeReason != ''">trade_reason = #{tradeReason},</if>
             <if test="tradePrice != null">trade_price = #{tradePrice},</if>
             <if test="tradeVolume != null">trade_volume = #{tradeVolume},</if>
             <if test="tradeAmount != null">trade_amount = #{tradeAmount},</if>

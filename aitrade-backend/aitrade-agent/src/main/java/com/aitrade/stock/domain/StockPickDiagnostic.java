@@ -126,6 +126,9 @@ public class StockPickDiagnostic {
     // 記錄創建時間
     private LocalDateTime createdAt;
 
+    private BigDecimal targetPrice5d; // 預測未來 5 天目標止盈價
+    private BigDecimal stopLossPrice;  // 建議動態止損價
+
     /**
      * 生成供大模型阅读的量化特征摘要（内聚于实体类中，简体中文版）
      */

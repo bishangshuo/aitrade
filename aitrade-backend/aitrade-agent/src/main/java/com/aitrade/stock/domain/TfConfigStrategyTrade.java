@@ -48,6 +48,10 @@ public class TfConfigStrategyTrade extends BaseEntity
     @Excel(name = "止盈幅度:如果止盈方法为2，则止盈幅度由k线来动态计算")
     private BigDecimal stopProfitRatio;
 
+    /** 手续费比例 */
+    @Excel(name = "手续费比例")
+    private BigDecimal commissionRate;
+
     public void setId(Long id) 
     {
         this.id = id;
@@ -128,6 +132,16 @@ public class TfConfigStrategyTrade extends BaseEntity
         return stopProfitRatio;
     }
 
+    public void setCommissionRate(BigDecimal commissionRate)
+    {
+        this.commissionRate = commissionRate;
+    }
+
+    public BigDecimal getCommissionRate()
+    {
+        return commissionRate;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -139,6 +153,7 @@ public class TfConfigStrategyTrade extends BaseEntity
             .append("stopLossRatio", getStopLossRatio())
             .append("stopProfitMethod", getStopProfitMethod())
             .append("stopProfitRatio", getStopProfitRatio())
+            .append("commissionRate", getCommissionRate())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
             .toString();

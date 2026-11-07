@@ -2,6 +2,7 @@ package com.aitrade.stock.mapper;
 
 import java.util.List;
 import com.aitrade.stock.domain.TfFundFlow;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 回測資金流水明細Mapper接口
@@ -9,6 +10,7 @@ import com.aitrade.stock.domain.TfFundFlow;
  * @author aitrade
  * @date 2026-10-25
  */
+@Mapper
 public interface TfFundFlowMapper 
 {
     /**

@@ -2,6 +2,7 @@ package com.aitrade.stock.mapper;
 
 import java.util.List;
 import com.aitrade.stock.domain.TfAccount;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 回測虛擬賬戶Mapper接口
@@ -9,6 +10,7 @@ import com.aitrade.stock.domain.TfAccount;
  * @author aitrade
  * @date 2026-10-25
  */
+@Mapper
 public interface TfAccountMapper 
 {
     /**
@@ -18,6 +20,8 @@ public interface TfAccountMapper
      * @return 回測虛擬賬戶
      */
     public TfAccount selectTfAccountById(Long id);
+
+    public TfAccount selectTfAccountByNo(String accountNo);
 
     /**
      * 查询回測虛擬賬戶列表

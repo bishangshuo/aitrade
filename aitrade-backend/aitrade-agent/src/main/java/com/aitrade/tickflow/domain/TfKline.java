@@ -10,6 +10,7 @@ public class TfKline implements Serializable {
     private static final long serialVersionUID = 1L;
     private String symbol;
     private String stockName;
+    //时间戳，以毫秒为单位
     private Long timestamp;
     private BigDecimal open;
     private BigDecimal high;

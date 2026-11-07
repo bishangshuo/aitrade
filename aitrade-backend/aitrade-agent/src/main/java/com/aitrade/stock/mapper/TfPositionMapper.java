@@ -2,6 +2,7 @@ package com.aitrade.stock.mapper;
 
 import java.util.List;
 import com.aitrade.stock.domain.TfPosition;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 回測當前持倉Mapper接口
@@ -9,6 +10,7 @@ import com.aitrade.stock.domain.TfPosition;
  * @author aitrade
  * @date 2026-10-25
  */
+@Mapper
 public interface TfPositionMapper 
 {
     /**
