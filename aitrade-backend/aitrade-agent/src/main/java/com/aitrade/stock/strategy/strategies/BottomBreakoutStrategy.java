@@ -1,6 +1,7 @@
 package com.aitrade.stock.strategy.strategies;
 
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.stock.strategy.enums.StrategyType;
 import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
@@ -42,7 +43,7 @@ public class BottomBreakoutStrategy implements StockPickerStrategy {
     @Override
     public boolean filter(List<TfKline> klines, StockAnalysisContext context) {
         // 相容原有策略介面：內部調用完整分析方法，僅返回 passed 狀態
-        StockPickDiagnostic diagnostic = analyze("UNKNOWN", "未知", LocalDate.now(), klines, context);
+        StockPickDiagnostic diagnostic = analyze(null, "UNKNOWN", "未知", LocalDate.now(), klines, context);
         return diagnostic.getPassed().equals(1);
     }
 
@@ -57,10 +58,11 @@ public class BottomBreakoutStrategy implements StockPickerStrategy {
      * @return            包含所有指標與得分的診斷記錄實體
      */
     @Override
-    public StockPickDiagnostic analyze(String symbol, String stockName, LocalDate tradeDate,
+    public StockPickDiagnostic analyze(TfBacktestRecord backtestRecord, String symbol, String stockName, LocalDate tradeDate,
                                        List<TfKline> klines, StockAnalysisContext context) {
         // 初始化診斷構建器，預設標記為未通過
         StockPickDiagnostic.StockPickDiagnosticBuilder builder = StockPickDiagnostic.builder()
+                .backtestId(backtestRecord != null ? backtestRecord.getId() : null)
                 .symbol(symbol)
                 .stockName(stockName)
                 .tradeDate(tradeDate)

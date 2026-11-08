@@ -8,6 +8,7 @@ import com.aitrade.stock.handler.DayTaResultListener;
 import com.aitrade.stock.mapper.StockPickDiagnosticMapper;
 import com.aitrade.stock.service.IFinancialRiskFilterService;
 import com.aitrade.stock.service.IStockTaService;
+import com.aitrade.stock.service.ITfPositionService;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.stock.strategy.factory.StockStrategyFactory;
 import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
@@ -57,11 +58,9 @@ public class StockTaServiceImpl implements IStockTaService {
     @Autowired
     private StockPickDiagnosticMapper diagnosticMapper;
 
-    @Override
-    public void startTA(AtomicBoolean isRunning, DayTaResultListener listener) {
-        LocalDate date = LocalDate.now();
-        startTA(null, date, isRunning, listener);
-    }
+    @Autowired
+    private ITfPositionService tfPositionService;
+
     @Override
     public void startTA(TfBacktestRecord backtestRecord, LocalDate date, AtomicBoolean isRunning, DayTaResultListener dayTaResultListener) {
         //获取所有股票标识
@@ -72,6 +71,11 @@ public class StockTaServiceImpl implements IStockTaService {
             dayTaResultListener.onComplete();
             return;
         }
+
+        //过滤掉已经回测持仓的股票
+        //T+1交易日日期
+        LocalDate tPlus1Date = date.plusDays(1);
+        stockList = stockList.stream().filter(stock -> !tfPositionService.checkInPosition(backtestRecord.getId(), stock.getCode(), tPlus1Date)).toList();
 
         //过滤掉退市、ST等不稳定股票
         stockList = stockList
@@ -103,7 +107,7 @@ public class StockTaServiceImpl implements IStockTaService {
                 public void run() {
                     try {
                         limiter.acquire();
-                        doTAOfStock(stock, marketRegimeResult, date, dayTaResultListener, new StockTaCompleteListener() {
+                        doTAOfStock(backtestRecord, stock, marketRegimeResult, date, dayTaResultListener, new StockTaCompleteListener() {
                             @Override
                             public void complete(TfStock stock, boolean success) {
                                 if(success) {
@@ -147,7 +151,7 @@ public class StockTaServiceImpl implements IStockTaService {
      * @param date
      * @param handler
      */
-    private void doTAOfStock(TfStock stock, MarketRegimeResult marketRegimeResult, LocalDate date, DayTaResultListener dayTaResultListener, StockTaCompleteListener handler) {
+    private void doTAOfStock(TfBacktestRecord backtestRecord, TfStock stock, MarketRegimeResult marketRegimeResult, LocalDate date, DayTaResultListener dayTaResultListener, StockTaCompleteListener handler) {
         //根据市场基调，获取对应的股票筛选策略
         StockPickerStrategy strategy = strategyFactory.getStrategy(marketRegimeResult.getRegime());
 
@@ -157,7 +161,7 @@ public class StockTaServiceImpl implements IStockTaService {
         // 利用 K 線直接計算籌碼 Context（ 获利盘 profitRatio & 筹码集中度 isChipSinglePeak ）
         StockAnalysisContext context = ChipCalculator.calculateContextFromKlines(stockKlineList);
 
-        StockPickDiagnostic diagnostic = strategy.analyze(stock.getSymbol(), stock.getName(), date, stockKlineList, context);
+        StockPickDiagnostic diagnostic = strategy.analyze(backtestRecord, stock.getSymbol(), stock.getName(), date, stockKlineList, context);
         if(diagnostic.getPassed().equals(1)) {
             log.info("股票 {}:{} 通过筛选", stock.getSymbol(), stock.getName());
         }

@@ -81,6 +81,9 @@ public class BackTestServiceImpl implements IBackTestService {
     @Autowired
     private TfFundFlowMapper tfFundFlowMapper;
 
+    @Autowired
+    private TfAccountDailyMapper tfAccountDailyMapper;
+
     @Override
     public SseEmitter backTest(TfBacktestRecord record) {
         TfBacktestRecord tfBacktestRecord = tfBacktestRecordMapper.selectTfBacktestRecordById(record.getId());
@@ -113,6 +116,7 @@ public class BackTestServiceImpl implements IBackTestService {
             try {
                 LocalDate currentDate = DateUtils.toLocalDate(tfBacktestRecord.getFromDate());
                 LocalDate toDate = DateUtils.toLocalDate(tfBacktestRecord.getToDate());
+                createAccountDaily(tfBacktestRecord, cancelled, currentDate, toDate, sseLock, emitter);
                 doRunTest(tfBacktestRecord, cancelled, currentDate, toDate, sseLock, emitter);
             } catch (Exception e) {
                 log.error("回测执行异常", e);
@@ -134,6 +138,50 @@ public class BackTestServiceImpl implements IBackTestService {
         return emitter;
     }
 
+    /**
+     * 创建回测账户日历记录
+     * @param backtestRecord
+     * @param cancelled
+     * @param fromDate
+     * @param toDate
+     * @param sseLock
+     * @param emitter
+     */
+    private void createAccountDaily(
+            TfBacktestRecord backtestRecord,
+            AtomicBoolean cancelled,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Object sseLock,
+            SseEmitter emitter
+    ) {
+        log.info("创建回测账户日历记录 {}", fromDate);
+        //获取交易日历列表
+        TaCal query = new TaCal();
+        query.setBeginDate(DateUtils.toDate(fromDate));
+        query.setEndDate(DateUtils.toDate(toDate));
+        List<TaCal> taCalList = taCalService.selectTaCalList(query);
+
+        for (TaCal taCal : taCalList) {
+            TfAccountDaily accountDaily = new TfAccountDaily();
+            accountDaily.setBacktestId(backtestRecord.getId());
+            accountDaily.setCalenderDate(taCal.getCalDate());
+            accountDaily.setAvailableCash(backtestRecord.getInitialCash());
+            accountDaily.setMarketValue(BigDecimal.ZERO);
+            accountDaily.setTotalAssets(accountDaily.getAvailableCash().add(accountDaily.getMarketValue()));
+            tfAccountDailyMapper.insertTfAccountDaily(accountDaily);
+        }
+    }
+
+    /**
+     * 执行回测
+     * @param backtestRecord
+     * @param cancelled
+     * @param currentDate
+     * @param toDate
+     * @param sseLock
+     * @param emitter
+     */
     private void doRunTest(TfBacktestRecord backtestRecord, AtomicBoolean cancelled, LocalDate currentDate, LocalDate toDate, Object sseLock, SseEmitter emitter) {
         if(currentDate.isAfter(toDate)) {
             //回测完成
@@ -186,6 +234,7 @@ public class BackTestServiceImpl implements IBackTestService {
     private void takeAction(TfBacktestRecord backtestRecord, AtomicBoolean cancelled, LocalDate currentDate, SseEmitter emitter, ActionMessageListener actionMessageListener) {
         //拿取ta选股结果为passed的列表
         StockPickDiagnostic query = new StockPickDiagnostic();
+        query.setBacktestId(backtestRecord.getId());
         query.setTradeDate(currentDate);
         query.setPassed(1);
         //备选50个
@@ -237,6 +286,7 @@ public class BackTestServiceImpl implements IBackTestService {
             Date nextTradeDate,
             SseEmitter emitter
     ) {
+        // 如果账户余额已经分配完毕，则终止买入，要等到资金回笼并足后后才继续
 
         // 终止条件：买够 10 个 / 已取消 / 遍历完
         if (bought.get() >= 10 || cancelled.get() || index >= passedStocks.size()) {
@@ -261,17 +311,20 @@ public class BackTestServiceImpl implements IBackTestService {
                     .thenAccept(passed -> {
                         if (Boolean.TRUE.equals(passed)) {
                             log.info("风险公告深度复核通过: {}", stock);
-                            begeinTrade(backtestRecord, cancelled, stock, currentDate, emitter);
-                            bought.getAndIncrement();
+                            boolean tradeSuccess = begeinTrade(backtestRecord, cancelled, stock, currentDate, emitter);
+                            if(tradeSuccess) {
+                                bought.getAndIncrement();
+                            }
                         } else {
                             log.info("风险公告深度复核未通过: {}", stock);
                         }
                     });
         } else {
             // 无风险公告 -> 直接买入
-            begeinTrade(backtestRecord, cancelled, stock, currentDate, emitter);
-
-            bought.getAndIncrement();
+            boolean tradeSuccess = begeinTrade(backtestRecord, cancelled, stock, currentDate, emitter);
+            if(tradeSuccess) {
+                bought.getAndIncrement();
+            }
             step = CompletableFuture.completedFuture(null);
         }
 
@@ -298,21 +351,27 @@ public class BackTestServiceImpl implements IBackTestService {
         return future;
     }
 
-    private void begeinTrade(TfBacktestRecord backtestRecord, AtomicBoolean cancelled, StockPickDiagnostic stockPickDiagnostic, LocalDate currentDate, SseEmitter emitter) {
+    private boolean begeinTrade(TfBacktestRecord backtestRecord, AtomicBoolean cancelled, StockPickDiagnostic stockPickDiagnostic, LocalDate currentDate, SseEmitter emitter) {
 
         //获取T+1日到T+5日的stock的分时k线
         TfStock stock = new TfStock();
         stock.setSymbol(stockPickDiagnostic.getSymbol());
         stock.setName(stockPickDiagnostic.getStockName());
         List<TfKline> klines = aStockKlineFetcher.getKlineSingle(stock, currentDate, 5, "1m");
+        if(klines == null || klines.isEmpty()) {
+            return false;
+        }
         //买入
         TfTradeExecution execution = buyStock(backtestRecord, currentDate, emitter, stockPickDiagnostic, klines);
+
+        if(execution == null) {
+            return false;
+        }
         //发送买入信号
         //卖出
-        if(execution != null) {
-            sellStock(execution, backtestRecord, currentDate, emitter, stockPickDiagnostic, klines);
-        }
+        sellStock(execution, backtestRecord, currentDate, emitter, stockPickDiagnostic, klines);
         //发送卖出信号
+        return true;
     }
 
     /**
@@ -327,7 +386,7 @@ public class BackTestServiceImpl implements IBackTestService {
             log.warn("该股票自{}的第二个交易日起的5天内没有K线数据，可能停牌了, 不买入", currentDate.toString());
                 return null;
         }
-        //T+1日开盘价,去开盘时间9:30
+        //T+1日开盘价,取开盘时间9:30
         LocalDate openTime = LocalDate.of(9, 30, 0);
         BigDecimal openPrice = BigDecimal.ZERO;
         LocalDate tradeTime = null;
@@ -396,6 +455,7 @@ public class BackTestServiceImpl implements IBackTestService {
         log.info("买入股票: {}", stockPickDiagnostic.getStockName());
         TfTradeExecution execution = new TfTradeExecution();
         execution.setAccountNo(accountNo);
+        execution.setBacktestId(backtestRecord.getId());
         execution.setOrderId(orderId);
         execution.setSymbol(stockPickDiagnostic.getSymbol());
         execution.setStockName(stockPickDiagnostic.getStockName());
@@ -541,6 +601,8 @@ public class BackTestServiceImpl implements IBackTestService {
         //创建卖出执行记录
         TfTradeExecution sellExecution = new TfTradeExecution();
         sellExecution.setAccountNo(buyExecution.getAccountNo());
+        sellExecution.setBacktestId(backtestRecord.getId());
+
         //方便查询，买卖同一个订单编号
         sellExecution.setOrderId(buyExecution.getOrderId());
         sellExecution.setSymbol(buyExecution.getSymbol());

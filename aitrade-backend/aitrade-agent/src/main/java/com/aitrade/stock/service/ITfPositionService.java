@@ -1,5 +1,6 @@
 package com.aitrade.stock.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import com.aitrade.stock.domain.TfPosition;
 
@@ -58,4 +59,13 @@ public interface ITfPositionService
      * @return 结果
      */
     public int deleteTfPositionById(Long id);
+
+    /**
+     * 检查持仓: 检查股票是否在持仓中
+     * @param backtestId
+     * @param symbol
+     * @param tradeDate 交易日
+     * @return
+     */
+    boolean checkInPosition(Long backtestId, String symbol, LocalDate tradeDate);
 }

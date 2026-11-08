@@ -11,12 +11,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public interface IStockTaService {
     /**
-     * 开始进行技术分析选股
-     * @param isRunning
-     */
-    void startTA(AtomicBoolean isRunning, DayTaResultListener listener);
-
-    /**
      * 开始进行技术分析选股，指定回测日
      * @param date
      * @param isRunning

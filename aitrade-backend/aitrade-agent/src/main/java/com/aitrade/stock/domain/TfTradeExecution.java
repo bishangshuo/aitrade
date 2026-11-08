@@ -28,6 +28,10 @@ public class TfTradeExecution extends BaseEntity
     @Excel(name = "賬戶編號")
     private String accountNo;
 
+    /** 回測編號 */
+    @Excel(name = "回測編號")
+    private Long backtestId;
+
     /** 訂單編號 */
     @Excel(name = "訂單編號")
     private String orderId;
@@ -83,6 +87,7 @@ public class TfTradeExecution extends BaseEntity
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
             .append("accountNo", getAccountNo())
+            .append("backtestId", getBacktestId())
             .append("orderId", getOrderId())
             .append("symbol", getSymbol())
             .append("stockName", getStockName())

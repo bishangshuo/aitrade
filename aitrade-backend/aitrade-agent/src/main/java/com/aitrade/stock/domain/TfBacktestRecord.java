@@ -1,5 +1,6 @@
 package com.aitrade.stock.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import com.aitrade.common.core.domain.BaseEntity;
@@ -39,6 +40,10 @@ public class TfBacktestRecord extends BaseEntity
     @Excel(name = "结束日期", width = 30, dateFormat = "yyyy-MM-dd")
     private Date toDate;
 
+    /** 初始资金 */
+    @Excel(name = "初始资金")
+    private BigDecimal initialCash;
+
     /** 主升浪策略配置ID */
     @Excel(name = "主升浪策略配置ID")
     private Long cnfStrongBreakoutId;
@@ -68,6 +73,17 @@ public class TfBacktestRecord extends BaseEntity
     private Long cnfTradeId;
 
     private TfConfigStrategyTrade cnfTrade;
+
+    /**当前已完成日期
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private Date finishedDate;
+
+    /**
+     * 状态0未开始1正在进行2已完成3已终止
+     */
+    @Excel(name = "状态", readConverterExp = "0=未开始,1=正在进行,2=已完成,3=已终止")
+    private Integer status;
 
     public void setId(Long id) 
     {
@@ -117,6 +133,16 @@ public class TfBacktestRecord extends BaseEntity
     public Date getToDate() 
     {
         return toDate;
+    }
+
+    public void setInitialCash(BigDecimal initialCash)
+    {
+        this.initialCash = initialCash;
+    }
+
+    public BigDecimal getInitialCash()
+    {
+        return initialCash;
     }
 
     public void setCnfStrongBreakoutId(Long cnfStrongBreakoutId) 

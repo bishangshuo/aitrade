@@ -62,6 +62,8 @@ CREATE TABLE `ta_stock_pick_diagnostic` (
 @AllArgsConstructor
 public class StockPickDiagnostic {
     private Long id;
+    // 回測主鍵ID
+    private Long backtestId;
     // 股票代碼
     private String symbol;
     // 股票名稱

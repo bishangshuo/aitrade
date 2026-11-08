@@ -1,6 +1,7 @@
 package com.aitrade.stock.strategy.interfaces;
 
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.tickflow.domain.TfKline;
 
@@ -22,6 +23,7 @@ public interface StockPickerStrategy {
     }
 
     StockPickDiagnostic analyze(
+            TfBacktestRecord backtestRecord,
             String symbol,
             String stockName,
             LocalDate tradeDate,

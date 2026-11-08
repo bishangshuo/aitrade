@@ -7,6 +7,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap type="TfTradeExecution" id="TfTradeExecutionResult">
         <result property="id"    column="id"    />
         <result property="accountNo"    column="account_no"    />
+        <result property="backtestId"    column="backtest_id"    />
         <result property="orderId"    column="order_id"    />
         <result property="symbol"    column="symbol"    />
         <result property="stockName"    column="stock_name"    />
@@ -23,13 +24,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTfTradeExecutionVo">
-        select id, account_no, order_id, symbol, stock_name, trade_side, trade_reason, trade_price, trade_volume, trade_amount, commission, tax, realized_pnl, trade_time, create_time from tf_trade_execution
+        select id, account_no, backtest_id, order_id, symbol, stock_name, trade_side, trade_reason, trade_price, trade_volume, trade_amount, commission, tax, realized_pnl, trade_time, create_time from tf_trade_execution
     </sql>
 
     <select id="selectTfTradeExecutionList" parameterType="TfTradeExecution" resultMap="TfTradeExecutionResult">
         <include refid="selectTfTradeExecutionVo"/>
         <where>  
             <if test="accountNo != null  and accountNo != ''"> and account_no = #{accountNo}</if>
+            <if test="backtestId != null  and backtestId != ''"> and backtest_id = #{backtestId}</if>
             <if test="orderId != null  and orderId != ''"> and order_id = #{orderId}</if>
             <if test="symbol != null  and symbol != ''"> and symbol = #{symbol}</if>
             <if test="stockName != null  and stockName != ''"> and stock_name like concat('%', #{stockName}, '%')</if>
@@ -54,6 +56,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into tf_trade_execution
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="accountNo != null and accountNo != ''">account_no,</if>
+            <if test="backtestId != null and backtestId != ''">backtest_id,</if>
             <if test="orderId != null and orderId != ''">order_id,</if>
             <if test="symbol != null and symbol != ''">symbol,</if>
             <if test="stockName != null and stockName != ''">stock_name,</if>
@@ -70,6 +73,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="accountNo != null and accountNo != ''">#{accountNo},</if>
+            <if test="backtestId != null and backtestId != ''">#{backtestId},</if>
             <if test="orderId != null and orderId != ''">#{orderId},</if>
             <if test="symbol != null and symbol != ''">#{symbol},</if>
             <if test="stockName != null and stockName != ''">#{stockName},</if>
@@ -89,6 +93,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateTfTradeExecution" parameterType="TfTradeExecution">
         update tf_trade_execution
         <trim prefix="SET" suffixOverrides=",">
+            <if test="backtestId != null and backtestId != ''">backtest_id = #{backtestId},</if>
             <if test="accountNo != null and accountNo != ''">account_no = #{accountNo},</if>
             <if test="orderId != null and orderId != ''">order_id = #{orderId},</if>
             <if test="symbol != null and symbol != ''">symbol = #{symbol},</if>

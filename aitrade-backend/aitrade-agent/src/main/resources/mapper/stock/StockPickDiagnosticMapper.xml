@@ -42,6 +42,7 @@
 
     <resultMap id="StockPickDiagnosticResult" type="StockPickDiagnostic">
         <result property="id" column="id" />
+        <result property="backtestId" column="backtest_id" />
         <result property="symbol" column="symbol" />
         <result property="stockName" column="stock_name" />
         <result property="tradeDate" column="trade_date" />
@@ -73,7 +74,7 @@
         <result property="createdAt" column="created_at" />
     </resultMap>
     <sql id="selectStockPickDiagnostic">
-        select id, symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
+        select id, backtest_id, symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
         match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
         vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
         kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
@@ -82,7 +83,7 @@
 
     <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO ta_stock_pick_diagnostic (
-        symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
+        backtest_id, symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
         match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
         vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
         kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
@@ -90,7 +91,7 @@
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
-            #{item.symbol}, #{item.stockName}, #{item.tradeDate}, #{item.strategyCode}, #{item.strategyName}, #{item.passed}, #{item.failReason},
+            #{item.backtestId}, #{item.symbol}, #{item.stockName}, #{item.tradeDate}, #{item.strategyCode}, #{item.strategyName}, #{item.passed}, #{item.failReason},
             #{item.matchVcp}, #{item.matchMaCoil}, #{item.matchAirRefuel}, #{item.closePrice}, #{item.changeRate},
             #{item.volRatio}, #{item.vcpAmplitude}, #{item.macdDif}, #{item.macdDea}, #{item.macdHist},
             #{item.kdjK}, #{item.kdjD}, #{item.rsi14}, #{item.obv}, #{item.profitRatio}, #{item.isChipSinglePeak},
@@ -101,6 +102,7 @@
     <select id="selectTopScore" parameterType="StockPickDiagnostic" resultMap="StockPickDiagnosticResult">
         <include refid="selectStockPickDiagnostic"/>
         <where>
+            <if test="et.backtestId != null"> and backtest_id = #{et.backtestId} </if>
             <if test="et.symbol != null and et.symbol != ''"> and symbol = #{et.symbol} </if>
             <if test="et.stockName != null and et.stockName != ''"> and stock_name like CONCAT('%', #{et.stockName}, '%') </if>
             <if test="et.tradeDate != null"> and DATE(trade_date) = DATE(#{et.tradeDate}) </if>

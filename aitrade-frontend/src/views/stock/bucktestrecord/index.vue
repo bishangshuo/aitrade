@@ -140,6 +140,7 @@
           <span>{{ parseTime(scope.row.toDate, '{y}-{m}-{d}') }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="初始化资金" align="center" prop="initialCash" />
       <el-table-column label="主升浪策略配置ID" align="center" prop="cnfStrongBreakoutId" />
       <el-table-column label="底部反转策略配置ID" align="center" prop="cnfBottomPullbackId" />
       <el-table-column label="震荡攀升策略参数配置ID" align="center" prop="cnfPullbackLowSuckId" />
@@ -205,6 +206,11 @@
                 value-format="yyyy-MM-dd"
                 placeholder="请选择结束日期">
               </el-date-picker>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="初始化资金" prop="initialCash">
+              <el-input type="number" v-model="form.initialCash" placeholder="请输入初始化资金" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -296,21 +302,6 @@ export default {
         ],
         toDate: [
           { required: true, message: "结束日期不能为空", trigger: "blur" }
-        ],
-        cnfStrongBreakoutId: [
-          { required: true, message: "主升浪策略配置ID不能为空", trigger: "blur" }
-        ],
-        cnfBottomPullbackId: [
-          { required: true, message: "底部反转策略配置ID不能为空", trigger: "blur" }
-        ],
-        cnfPullbackLowSuckId: [
-          { required: true, message: "震荡攀升策略参数配置ID不能为空", trigger: "blur" }
-        ],
-        cnfOversoldReboundId: [
-          { required: true, message: "超跌反弹策略配置ID不能为空", trigger: "blur" }
-        ],
-        cnfTradeId: [
-          { required: true, message: "交易策略配置ID不能为空", trigger: "blur" }
         ],
       }
     }

@@ -1,6 +1,7 @@
 package com.aitrade.stock.strategy.strategies;
 
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.stock.strategy.enums.StrategyType;
 import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
@@ -35,7 +36,7 @@ public class EmptyDefenseStrategy implements StockPickerStrategy {
     }
 
     @Override
-    public StockPickDiagnostic analyze(String symbol, String stockName, LocalDate tradeDate, List<TfKline> klines, StockAnalysisContext context) {
+    public StockPickDiagnostic analyze(TfBacktestRecord backtestRecord, String symbol, String stockName, LocalDate tradeDate, List<TfKline> klines, StockAnalysisContext context) {
         return null;
     }
 }

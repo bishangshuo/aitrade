@@ -1,5 +1,6 @@
 package com.aitrade.stock.strategy.strategies;
 import com.aitrade.stock.domain.StockPickDiagnostic;
+import com.aitrade.stock.domain.TfBacktestRecord;
 import com.aitrade.stock.strategy.domain.StockAnalysisContext;
 import com.aitrade.stock.strategy.enums.StrategyType;
 import com.aitrade.stock.strategy.interfaces.StockPickerStrategy;
@@ -47,7 +48,7 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
     @Override
     public boolean filter(List<TfKline> klines, StockAnalysisContext context) {
         // 內部直接調用完整分析方法，並僅返回 passed 狀態
-        StockPickDiagnostic diagnostic = analyze("UNKNOWN", "未知", LocalDate.now(), klines, context);
+        StockPickDiagnostic diagnostic = analyze(null, "UNKNOWN", "未知", LocalDate.now(), klines, context);
         return diagnostic.getPassed().equals(1);
     }
 
@@ -63,6 +64,7 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
      */
     @Override
     public StockPickDiagnostic analyze(
+            TfBacktestRecord backtestRecord,
             String symbol,
             String stockName,
             LocalDate tradeDate,
@@ -71,6 +73,7 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
     ) {
         // 初始化診斷構建器，預設標記為未通過
         StockPickDiagnostic.StockPickDiagnosticBuilder builder = StockPickDiagnostic.builder()
+                .backtestId(backtestRecord == null ? null : backtestRecord.getId())
                 .symbol(symbol)
                 .stockName(stockName)
                 .tradeDate(tradeDate)

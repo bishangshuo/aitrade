@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aitrade.stock.mapper.TfAccountDailyMapper">
+    
+    <resultMap type="TfAccountDaily" id="TfAccountDailyResult">
+        <result property="id"    column="id"    />
+        <result property="accountNo"    column="account_no"    />
+        <result property="calenderDate"    column="calender_date"    />
+        <result property="availableCash"    column="available_cash"    />
+        <result property="frozenCash"    column="frozen_cash"    />
+        <result property="marketValue"    column="market_value"    />
+        <result property="totalAssets"    column="total_assets"    />
+        <result property="totalPnl"    column="total_pnl"    />
+        <result property="totalPnlPct"    column="total_pnl_pct"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTfAccountDailyVo">
+        select id, account_no, calender_date, available_cash, frozen_cash, market_value, total_assets, total_pnl, total_pnl_pct, create_time, update_time from tf_account_daily
+    </sql>
+
+    <select id="selectTfAccountDailyList" parameterType="TfAccountDaily" resultMap="TfAccountDailyResult">
+        <include refid="selectTfAccountDailyVo"/>
+        <where>  
+            <if test="accountNo != null  and accountNo != ''"> and account_no = #{accountNo}</if>
+            <if test="calenderDate != null "> and calender_date = #{calenderDate}</if>
+            <if test="availableCash != null "> and available_cash = #{availableCash}</if>
+            <if test="frozenCash != null "> and frozen_cash = #{frozenCash}</if>
+            <if test="marketValue != null "> and market_value = #{marketValue}</if>
+            <if test="totalAssets != null "> and total_assets = #{totalAssets}</if>
+            <if test="totalPnl != null "> and total_pnl = #{totalPnl}</if>
+            <if test="totalPnlPct != null "> and total_pnl_pct = #{totalPnlPct}</if>
+        </where>
+    </select>
+    
+    <select id="selectTfAccountDailyById" parameterType="Long" resultMap="TfAccountDailyResult">
+        <include refid="selectTfAccountDailyVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTfAccountDaily" parameterType="TfAccountDaily" useGeneratedKeys="true" keyProperty="id">
+        insert into tf_account_daily
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no,</if>
+            <if test="calenderDate != null">calender_date,</if>
+            <if test="availableCash != null">available_cash,</if>
+            <if test="frozenCash != null">frozen_cash,</if>
+            <if test="marketValue != null">market_value,</if>
+            <if test="totalAssets != null">total_assets,</if>
+            <if test="totalPnl != null">total_pnl,</if>
+            <if test="totalPnlPct != null">total_pnl_pct,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">#{accountNo},</if>
+            <if test="calenderDate != null">#{calenderDate},</if>
+            <if test="availableCash != null">#{availableCash},</if>
+            <if test="frozenCash != null">#{frozenCash},</if>
+            <if test="marketValue != null">#{marketValue},</if>
+            <if test="totalAssets != null">#{totalAssets},</if>
+            <if test="totalPnl != null">#{totalPnl},</if>
+            <if test="totalPnlPct != null">#{totalPnlPct},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTfAccountDaily" parameterType="TfAccountDaily">
+        update tf_account_daily
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="accountNo != null and accountNo != ''">account_no = #{accountNo},</if>
+            <if test="calenderDate != null">calender_date = #{calenderDate},</if>
+            <if test="availableCash != null">available_cash = #{availableCash},</if>
+            <if test="frozenCash != null">frozen_cash = #{frozenCash},</if>
+            <if test="marketValue != null">market_value = #{marketValue},</if>
+            <if test="totalAssets != null">total_assets = #{totalAssets},</if>
+            <if test="totalPnl != null">total_pnl = #{totalPnl},</if>
+            <if test="totalPnlPct != null">total_pnl_pct = #{totalPnlPct},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTfAccountDailyById" parameterType="Long">
+        delete from tf_account_daily where id = #{id}
+    </delete>
+
+    <delete id="deleteTfAccountDailyByIds" parameterType="String">
+        delete from tf_account_daily where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

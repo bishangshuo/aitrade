@@ -76,16 +76,17 @@ public class TfBacktestRecordServiceImpl implements ITfBacktestRecordService
         backtestRecord.setCnfStrongBreakout(strongBreakout);
 
         TfConfigStrategyBottomBreakout bottomBreakout = tfConfigStrategyBottomBreakoutMapper.selectTfConfigStrategyBottomBreakoutById(backtestRecord.getCnfBottomBreakoutId());
-
         backtestRecord.setCnfBottomBreakout(bottomBreakout);
 
         TfConfigStrategyPullbackLowSuck pullbackLowSuck = tfConfigStrategyPullbackLowSuckMapper.selectTfConfigStrategyPullbackLowSuckById(backtestRecord.getCnfPullbackLowSuckId());
-
         backtestRecord.setCnfPullbackLowSuck(pullbackLowSuck);
 
         TfConfigStrategyOversoldRebound oversoldRebound = tfConfigStrategyOversoldReboundMapper.selectTfConfigStrategyOversoldReboundById(backtestRecord.getCnfOversoldReboundId());
-
         backtestRecord.setCnfOversoldRebound(oversoldRebound);
+
+        TfConfigStrategyTrade tradeConfig = tfConfigStrategyTradeMapper.selectTfConfigStrategyTradeById(backtestRecord.getCnfTradeId());
+        backtestRecord.setCnfTrade(tradeConfig);
+
     }
 
     /**

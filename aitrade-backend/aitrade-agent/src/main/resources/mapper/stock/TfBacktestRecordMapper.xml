@@ -10,17 +10,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="name"    column="name"    />
         <result property="fromDate"    column="from_date"    />
         <result property="toDate"    column="to_date"    />
+        <result property="initialCash"    column="initial_cash"    />
         <result property="cnfStrongBreakoutId"    column="cnf_strong_breakout_id"    />
         <result property="cnfBottomBreakoutId"    column="cnf_bottom_breakout_id"    />
         <result property="cnfPullbackLowSuckId"    column="cnf_pullback_low_suck_id"    />
         <result property="cnfOversoldReboundId"    column="cnf_oversold_rebound_id"    />
         <result property="cnfTradeId"    column="cnf_trade_id"    />
+        <result property="finishedDate"    column="finished_date"    />
+        <result property="status"    column="status"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
     </resultMap>
 
     <sql id="selectTfBacktestRecordVo">
-        select id, code, name, from_date, to_date, cnf_strong_breakout_id, cnf_bottom_breakout_id, cnf_pullback_low_suck_id, cnf_oversold_rebound_id, cnf_trade_id, create_time, update_time from tf_backtest_record
+        select id, code, name, from_date, to_date, initial_cash, cnf_strong_breakout_id, cnf_bottom_breakout_id, cnf_pullback_low_suck_id, cnf_oversold_rebound_id, cnf_trade_id, finished_date, status, create_time, update_time from tf_backtest_record
     </sql>
 
     <select id="selectTfBacktestRecordList" parameterType="TfBacktestRecord" resultMap="TfBacktestRecordResult">
@@ -30,11 +33,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
             <if test="fromDate != null "> and from_date = #{fromDate}</if>
             <if test="toDate != null "> and to_date = #{toDate}</if>
+            <if test="initialCash != null "> and initial_cash = #{initialCash}</if>
             <if test="cnfStrongBreakoutId != null "> and cnf_strong_breakout_id = #{cnfStrongBreakoutId}</if>
             <if test="cnfBottomBreakoutId != null "> and cnf_bottom_breakout_id = #{cnfBottomBreakoutId}</if>
             <if test="cnfPullbackLowSuckId != null "> and cnf_pullback_low_suck_id = #{cnfPullbackLowSuckId}</if>
             <if test="cnfOversoldReboundId != null "> and cnf_oversold_rebound_id = #{cnfOversoldReboundId}</if>
             <if test="cnfTradeId != null "> and cnf_trade_id = #{cnfTradeId}</if>
+            <if test="finishedDate != null "> and finished_date = #{finishedDate}</if>
+            <if test="status != null "> and status = #{status}</if>
         </where>
     </select>
     
@@ -50,11 +56,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="name != null and name != ''">name,</if>
             <if test="fromDate != null">from_date,</if>
             <if test="toDate != null">to_date,</if>
+            <if test="initialCash != null">initial_cash,</if>
             <if test="cnfStrongBreakoutId != null">cnf_strong_breakout_id,</if>
             <if test="cnfBottomBreakoutId != null">cnf_bottom_breakout_id,</if>
             <if test="cnfPullbackLowSuckId != null">cnf_pullback_low_suck_id,</if>
             <if test="cnfOversoldReboundId != null">cnf_oversold_rebound_id,</if>
             <if test="cnfTradeId != null">cnf_trade_id,</if>
+            <if test="finishedDate != null">finished_date,</if>
+            <if test="status != null">status,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateTime != null">update_time,</if>
          </trim>
@@ -63,11 +72,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="name != null and name != ''">#{name},</if>
             <if test="fromDate != null">#{fromDate},</if>
             <if test="toDate != null">#{toDate},</if>
+            <if test="initialCash != null">#{initialCash},</if>
             <if test="cnfStrongBreakoutId != null">#{cnfStrongBreakoutId},</if>
             <if test="cnfBottomBreakoutId != null">#{cnfBottomBreakoutId},</if>
             <if test="cnfPullbackLowSuckId != null">#{cnfPullbackLowSuckId},</if>
             <if test="cnfOversoldReboundId != null">#{cnfOversoldReboundId},</if>
             <if test="cnfTradeId != null">#{cnfTradeId},</if>
+            <if test="finishedDate != null">#{finishedDate},</if>
+            <if test="status != null">#{status},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateTime != null">#{updateTime},</if>
          </trim>
@@ -80,11 +92,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="name != null and name != ''">name = #{name},</if>
             <if test="fromDate != null">from_date = #{fromDate},</if>
             <if test="toDate != null">to_date = #{toDate},</if>
+            <if test="initialCash != null">initial_cash = #{initialCash},</if>
             <if test="cnfStrongBreakoutId != null">cnf_strong_breakout_id = #{cnfStrongBreakoutId},</if>
             <if test="cnfBottomBreakoutId != null">cnf_bottom_breakout_id = #{cnfBottomBreakoutId},</if>
             <if test="cnfPullbackLowSuckId != null">cnf_pullback_low_suck_id = #{cnfPullbackLowSuckId},</if>
             <if test="cnfOversoldReboundId != null">cnf_oversold_rebound_id = #{cnfOversoldReboundId},</if>
             <if test="cnfTradeId != null">cnf_trade_id = #{cnfTradeId},</if>
+            <if test="finishedDate != null">finished_date = #{finishedDate},</if>
+            <if test="status != null">status = #{status},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </trim>

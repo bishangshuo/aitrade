@@ -28,7 +28,7 @@ import com.aitrade.common.core.page.TableDataInfo;
  * @date 2026-10-25
  */
 @RestController
-@RequestMapping("/tfstock/tfaccount")
+@RequestMapping("/stock/tfaccount")
 public class TfAccountController extends BaseController
 {
     @Autowired
@@ -37,7 +37,7 @@ public class TfAccountController extends BaseController
     /**
      * 查询回測虛擬賬戶列表
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:list')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:list')")
     @GetMapping("/list")
     public TableDataInfo list(TfAccount tfAccount)
     {
@@ -49,7 +49,7 @@ public class TfAccountController extends BaseController
     /**
      * 导出回測虛擬賬戶列表
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:export')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:export')")
     @Log(title = "回測虛擬賬戶", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void export(HttpServletResponse response, TfAccount tfAccount)
@@ -62,7 +62,7 @@ public class TfAccountController extends BaseController
     /**
      * 获取回測虛擬賬戶详细信息
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:query')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:query')")
     @GetMapping(value = "/{id}")
     public AjaxResult getInfo(@PathVariable("id") Long id)
     {
@@ -72,7 +72,7 @@ public class TfAccountController extends BaseController
     /**
      * 新增回測虛擬賬戶
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:add')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:add')")
     @Log(title = "回測虛擬賬戶", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody TfAccount tfAccount)
@@ -83,7 +83,7 @@ public class TfAccountController extends BaseController
     /**
      * 修改回測虛擬賬戶
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:edit')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:edit')")
     @Log(title = "回測虛擬賬戶", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody TfAccount tfAccount)
@@ -94,7 +94,7 @@ public class TfAccountController extends BaseController
     /**
      * 删除回測虛擬賬戶
      */
-    @PreAuthorize("@ss.hasPermi('tfstock:tfaccount:remove')")
+    @PreAuthorize("@ss.hasPermi('stock:tfaccount:remove')")
     @Log(title = "回測虛擬賬戶", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids)
