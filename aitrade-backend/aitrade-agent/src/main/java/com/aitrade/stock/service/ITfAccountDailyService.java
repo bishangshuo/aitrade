@@ -1,5 +1,6 @@
 package com.aitrade.stock.service;
 
+import java.util.Date;
 import java.util.List;
 import com.aitrade.stock.domain.TfAccountDaily;
 
@@ -58,4 +59,6 @@ public interface ITfAccountDailyService
      * @return 结果
      */
     public int deleteTfAccountDailyById(Long id);
+
+    TfAccountDaily getTfAccountDailyByAccountNoAndBacktestIdAndDate(String accountNo, Long backtestId, Date date);
 }

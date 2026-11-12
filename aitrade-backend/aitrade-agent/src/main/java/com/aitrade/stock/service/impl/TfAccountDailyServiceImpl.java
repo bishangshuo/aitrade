@@ -1,5 +1,6 @@
 package com.aitrade.stock.service.impl;
 
+import java.util.Date;
 import java.util.List;
 import com.aitrade.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,5 +93,15 @@ public class TfAccountDailyServiceImpl implements ITfAccountDailyService
     public int deleteTfAccountDailyById(Long id)
     {
         return tfAccountDailyMapper.deleteTfAccountDailyById(id);
+    }
+
+    @Override
+    public TfAccountDaily getTfAccountDailyByAccountNoAndBacktestIdAndDate(String accountNo, Long backtestId, Date date) {
+        TfAccountDaily accountDailyQuery = new TfAccountDaily();
+        accountDailyQuery.setAccountNo(accountNo);
+        accountDailyQuery.setBacktestId(backtestId);
+        accountDailyQuery.setCalenderDate(date);
+        List<TfAccountDaily> accountDailyList = tfAccountDailyMapper.selectTfAccountDailyList(accountDailyQuery);
+        return accountDailyList != null && !accountDailyList.isEmpty() ? accountDailyList.get(0) : null;
     }
 }

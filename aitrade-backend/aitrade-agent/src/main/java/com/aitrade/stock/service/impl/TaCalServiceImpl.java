@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import com.aitrade.common.utils.DateUtils;
 import com.aitrade.stock.domain.vo.HolidayGap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -97,7 +98,7 @@ public class TaCalServiceImpl implements ITaCalService
     }
 
     @Override
-    public HolidayGap isLongHolidayAhead(Date date) {
+    public HolidayGap isLongHolidayAhead(Date date, int days) {
         // 從資料庫查詢交易日曆，時間範圍為 date+1 到 date+30 天
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
@@ -114,7 +115,7 @@ public class TaCalServiceImpl implements ITaCalService
         List<TaCal> listDate = taCalMapper.selectTaCalList(query);
 
         // 如果資料不足，為保險起見可視為無法判斷或預設安全防禦
-        if(listDate == null || listDate.isEmpty() || listDate.size() < 5) {
+        if(listDate == null || listDate.isEmpty() || listDate.size() < days) {
             HolidayGap holidayGap = new HolidayGap();
             holidayGap.setWillBeHoliday(true);
             return holidayGap;
@@ -122,7 +123,7 @@ public class TaCalServiceImpl implements ITaCalService
 
         // 嚴格限制：只檢查「5天內」（即索引 0 到 4，對應距離 1~5 天）
         // 確保陣列長度足夠做 3 天連續檢查
-        int maxCheckIndex = Math.min(5, listDate.size() - 2);
+        int maxCheckIndex = Math.min(days, listDate.size() - 2);
 
         for(int i = 0; i < maxCheckIndex; i++) {
             // 檢查從 i 開始是否連續 3 天休市 (isOpen == 0)
@@ -164,6 +165,31 @@ public class TaCalServiceImpl implements ITaCalService
 
     @Override
     public Date getNextTradeDate(Date currentDate) {
+        return null;
+    }
+
+    /**
+     * 取得上一個交易日
+     * @param currentDate
+     * @return
+     */
+    public Date getPrevTradeDate(Date currentDate) {
+        TaCal query = new TaCal();
+        query.setEndDate(currentDate);
+        Date beginDate = DateUtils.getDateFromDistance(currentDate, -30);
+        List<TaCal> calList = taCalMapper.selectTaCalList(query);
+        if(calList == null || calList.isEmpty()) {
+            return null;
+        }
+        //将calList按calDate 倒序
+        calList.sort((a, b) -> b.getCalDate().compareTo(a.getCalDate()));
+        //去掉第一个
+        calList.remove(0);
+        for(TaCal cal : calList) {
+            if(cal.getIsOpen() == 1) {
+                return cal.getCalDate();
+            }
+        }
         return null;
     }
 }

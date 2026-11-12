@@ -62,13 +62,13 @@ public interface ITaCalService
     public int deleteTaCalById(Long id);
 
     /**
-     * 判断某一日历天是否之后的5天后是否为中长假
+     * 判断某一日历天是否之后的days天后是否为中长假
      * 中长假为国家法定节假日，有元旦、春节、清明节、五一劳动节、端午节、中秋节、国庆节。
      * 值得注意的是，A股市场中长假连休后周末调整上班日，也是休市的。
      * 但不论假期多复杂，只要5天后遇上3天休市，则认为是中长假。此时避免量化开单
      */
 
-    public HolidayGap isLongHolidayAhead(Date date);
+    public HolidayGap isLongHolidayAhead(Date date, int days);
 
     /**
      * 获取下一个交易日的日期
@@ -76,4 +76,11 @@ public interface ITaCalService
      * @return
      */
     public Date getNextTradeDate(Date currentDate);
+
+    /**
+     * 获取上一个交易日的日期
+     * @param currentDate
+     * @return
+     */
+    public Date getPrevTradeDate(Date currentDate);
 }

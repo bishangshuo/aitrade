@@ -84,6 +84,9 @@ public class BackTestServiceImpl implements IBackTestService {
     @Autowired
     private TfAccountDailyMapper tfAccountDailyMapper;
 
+    @Autowired
+    private ITfAccountDailyService tfAccountDailyService;
+
     @Override
     public SseEmitter backTest(TfBacktestRecord record) {
         TfBacktestRecord tfBacktestRecord = tfBacktestRecordMapper.selectTfBacktestRecordById(record.getId());
@@ -161,15 +164,26 @@ public class BackTestServiceImpl implements IBackTestService {
         query.setBeginDate(DateUtils.toDate(fromDate));
         query.setEndDate(DateUtils.toDate(toDate));
         List<TaCal> taCalList = taCalService.selectTaCalList(query);
+        if(taCalList == null || taCalList.isEmpty()) {
+            log.warn("没有找到交易日历数据，请检查日期范围 {}", query);
+            throw new IllegalArgumentException("没有找到交易日历数据，请检查日期范围 " + query);
+        }
 
+        long i = 0;
         for (TaCal taCal : taCalList) {
             TfAccountDaily accountDaily = new TfAccountDaily();
             accountDaily.setBacktestId(backtestRecord.getId());
             accountDaily.setCalenderDate(taCal.getCalDate());
-            accountDaily.setAvailableCash(backtestRecord.getInitialCash());
+            BigDecimal initialCash = BigDecimal.ZERO;
+            if(i == 0) {
+                initialCash = backtestRecord.getInitialCash();
+            }
+            accountDaily.setAvailableCash(initialCash);
             accountDaily.setMarketValue(BigDecimal.ZERO);
-            accountDaily.setTotalAssets(accountDaily.getAvailableCash().add(accountDaily.getMarketValue()));
+            accountDaily.setTotalAssets(initialCash);
             tfAccountDailyMapper.insertTfAccountDaily(accountDaily);
+
+            i++;
         }
     }
 
@@ -191,7 +205,7 @@ public class BackTestServiceImpl implements IBackTestService {
         }
 
         //currentDate之后的5天，如果遇上中长假，则不买
-        HolidayGap holidayGap = taCalService.isLongHolidayAhead(DateUtils.toDate(currentDate));
+        HolidayGap holidayGap = taCalService.isLongHolidayAhead(DateUtils.toDate(currentDate), 5);
         if(holidayGap != null && holidayGap.isWillBeHoliday()) {
             //遇上中长假，则不买；并跳到假后第一个交易日
             log.warn("遇上中长假，则不买；并跳到假后第一个交易日 {}", holidayGap);
@@ -405,6 +419,7 @@ public class BackTestServiceImpl implements IBackTestService {
             log.warn("该股票自{}的第二个交易日起的5天内没有K线数据，可能停牌了, 不买入", currentDate.toString());
             return null;
         }
+
         //如果开盘价比前一个交易日的收盘价高超过策略参数设定的阈值，则不买入
         BigDecimal threshold = backtestRecord.getCnfTrade().getT1HighOpenRatio();
         BigDecimal previousClosePrice = stockPickDiagnostic.getClosePrice();
@@ -414,18 +429,37 @@ public class BackTestServiceImpl implements IBackTestService {
                 return null;
             }
         }
-        //买入，开仓
+
         String accountNo = "100001";
-        // 1. 从账户里减总资金的1/10用于开仓
-        TfAccount account = tfAccountMapper.selectTfAccountByNo(accountNo);
-        if (account == null) {
-            log.error("账户不存在: {}", accountNo);
-            return null;
+
+        //首先获取当天的账户日历记录
+        TfAccountDaily accountDaily = tfAccountDailyService.getTfAccountDailyByAccountNoAndBacktestIdAndDate(accountNo, backtestRecord.getId(), DateUtils.toDate(tradeTime));
+        if(accountDaily == null) {
+            //获取前一天的账户日历
+            TfAccountDaily previousAccountDaily = tfAccountDailyService.getTfAccountDailyByAccountNoAndBacktestIdAndDate(accountNo, backtestRecord.getId(), DateUtils.toDate(tradeTime.minusDays(1)));
+            if(previousAccountDaily != null) {
+                accountDaily = previousAccountDaily;
+                accountDaily.setId(null);
+                accountDaily.setCreateTime(new Date());
+                accountDaily.setUpdateTime(new Date());
+                tfAccountDailyMapper.insertTfAccountDaily(accountDaily);
+            }
         }
+        if(accountDaily == null) {
+            throw new RuntimeException("账户日历不存在: " + accountNo + " " + backtestRecord.getId() + " " + tradeTime);
+        }
+
+        //买入，开仓
+        // 1. 从账户里减总资金的1/10用于开仓
+//        TfAccount account = tfAccountMapper.selectTfAccountByNo(accountNo);
+//        if (account == null) {
+//            log.error("账户不存在: {}", accountNo);
+//            return null;
+//        }
         //持仓市值
-        BigDecimal marketValue = account.getMarketValue();
+        BigDecimal marketValue = accountDaily.getMarketValue();
         //可用资金
-        BigDecimal availableCash = account.getAvailableCash();
+        BigDecimal availableCash = accountDaily.getAvailableCash();
 
         //买入金额
         BigDecimal buyAmount = (availableCash.add(marketValue)).divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP);
@@ -486,13 +520,13 @@ public class BackTestServiceImpl implements IBackTestService {
 
         //更新账户
         //可用余额减少tradeAmount+totalFee
-        account.setAvailableCash(account.getAvailableCash().subtract(tradeAmount).subtract(totalFee));
+        accountDaily.setAvailableCash(accountDaily.getAvailableCash().subtract(tradeAmount).subtract(totalFee));
         //持仓市值增加tradeAmount
-        account.setMarketValue(account.getMarketValue().add(tradeAmount));
+        accountDaily.setMarketValue(accountDaily.getMarketValue().add(tradeAmount));
         //总资产减少totalFee
-        account.setTotalAssets(account.getTotalAssets().subtract(totalFee));
-        account.setUpdateTime(DateUtils.toDate(tradeTime));
-        tfAccountMapper.updateTfAccount(account);
+        accountDaily.setTotalAssets(accountDaily.getTotalAssets().subtract(totalFee));
+        accountDaily.setUpdateTime(DateUtils.toDate(tradeTime));
+        tfAccountDailyMapper.updateTfAccountDaily(accountDaily);
 
         //添加账单记录
         //1买入扣款
@@ -519,6 +553,9 @@ public class BackTestServiceImpl implements IBackTestService {
         transferFeeFlow.setAmount(transferFee);
         transferFeeFlow.setRelatedOrderId(orderId);
         tfFundFlowMapper.insertTfFundFlow(transferFeeFlow);
+
+        //减少账户日历中当天记录的可用金额、总资产
+
 
         return execution;
     }

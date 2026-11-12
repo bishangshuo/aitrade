@@ -194,4 +194,35 @@ public class TfRiskReportServiceImpl implements ITfRiskReportService
         }
     }
 
+    @Override
+    public RiskReport aiTradeReportSync(
+        StockPickDiagnostic stockPickDiagnostic,
+        List<TfRiskAnn> tfRiskAnnList
+    ) {
+        try {
+            String agentId = agentContainer.getAgentId(AgentEnum.AGENT_FILTER_RISK_ANNOUNCE.getTitle());
+            Map<String, Object> inputs = new HashMap<>();
+
+            String query = "";
+
+            DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            String tradeDate = stockPickDiagnostic.getTradeDate().format(FORMATTER);
+            String strategyType = StrategyType.getByCode(stockPickDiagnostic.getStrategyCode()).getDescription();
+            String riskAnnouce = objectMapper.writeValueAsString(tfRiskAnnList);
+            String stockPickDiagnosticContent = stockPickDiagnostic.buildSummaryText();
+
+            AgentParamBuilder.makeAgentInputParam("stockCode", AgentParamType.LINE.getCode(), stockPickDiagnostic.getSymbol(), inputs);
+            AgentParamBuilder.makeAgentInputParam("stockName", AgentParamType.LINE.getCode(), stockPickDiagnostic.getStockName(), inputs);
+            AgentParamBuilder.makeAgentInputParam("tradeDate", AgentParamType.LINE.getCode(), tradeDate, inputs);
+            AgentParamBuilder.makeAgentInputParam("strategyType", AgentParamType.LINE.getCode(), strategyType, inputs);
+            AgentParamBuilder.makeAgentInputParam("riskAnnouce", AgentParamType.JSON.getCode(), riskAnnouce, inputs);
+            AgentParamBuilder.makeAgentInputParam("stockPickDiagnostic", AgentParamType.JSON.getCode(), stockPickDiagnosticContent, inputs);
+            String response = ragApiService.agent(agentId, query, inputs);
+            return objectMapper.readValue(response, RiskReport.class);
+        }
+        catch (Exception e) {
+            return null;
+        }
+    }
+
 }

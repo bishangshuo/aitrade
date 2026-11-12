@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.Date;
 import org.apache.commons.lang3.time.DateFormatUtils;
 
@@ -207,5 +208,13 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils
     public static Date fromTimestamp(long timestamp) {
         long millis = timestamp * 1000;
         return new Date(millis);
+    }
+
+    public static Date getDateFromDistance(Date date, int distance) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DAY_OF_MONTH, distance);
+        Date toDate = calendar.getTime();
+        return toDate;
     }
 }

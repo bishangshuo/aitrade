@@ -74,4 +74,9 @@ public interface ITfRiskReportService
             Runnable onError
     );
 
+    //AI复核同步方法
+    RiskReport aiTradeReportSync(
+        StockPickDiagnostic stockPickDiagnostic,
+        List<TfRiskAnn> tfRiskAnnList
+    );
 }

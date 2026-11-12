@@ -26,8 +26,8 @@ public class TaCal extends BaseEntity
     @Excel(name = "日历日期", width = 30, dateFormat = "yyyy-MM-dd")
     private Date calDate;
 
-    /** 是否开始1开始0修士 */
-    @Excel(name = "是否开始1开始0修士")
+    /** 是否交易日1开市0休市 */
+    @Excel(name = "是否交易日1开市0休市")
     private Integer isOpen;
 
     /** 礼拜名称1-7 */

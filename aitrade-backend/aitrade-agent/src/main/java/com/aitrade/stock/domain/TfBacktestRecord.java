@@ -30,6 +30,10 @@ public class TfBacktestRecord extends BaseEntity
     @Excel(name = "回测名称")
     private String name;
 
+    /** 账户编号 */
+    @Excel(name = "账户编号")
+    private String accountNo;
+
     /** 开始日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     @Excel(name = "开始日期", width = 30, dateFormat = "yyyy-MM-dd")
@@ -85,6 +89,9 @@ public class TfBacktestRecord extends BaseEntity
     @Excel(name = "状态", readConverterExp = "0=未开始,1=正在进行,2=已完成,3=已终止")
     private Integer status;
 
+    /** 是否使用AI 0不使用1使用 */
+    private Integer useAi;
+
     public void setId(Long id) 
     {
         this.id = id;
@@ -113,6 +120,16 @@ public class TfBacktestRecord extends BaseEntity
     public String getName() 
     {
         return name;
+    }
+
+    public void setAccountNo(String accountNo)
+    {
+        this.accountNo = accountNo;
+    }
+
+    public String getAccountNo()
+    {
+        return accountNo;
     }
 
     public void setFromDate(Date fromDate) 
@@ -245,12 +262,23 @@ public class TfBacktestRecord extends BaseEntity
         this.cnfTrade = cnfTrade;
     }
 
+    public void setUseAi(Integer useAi)
+    {
+        this.useAi = useAi;
+    }
+
+    public Integer getUseAi()
+    {
+        return useAi;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
             .append("code", getCode())
             .append("name", getName())
+            .append("accountNo", getAccountNo())
             .append("fromDate", getFromDate())
             .append("toDate", getToDate())
             .append("cnfStrongBreakoutId", getCnfStrongBreakoutId())
@@ -265,6 +293,7 @@ public class TfBacktestRecord extends BaseEntity
             .append("cnfTrade", getCnfTrade().toString())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
+            .append("useAi", getUseAi())
             .toString();
     }
 }
