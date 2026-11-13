@@ -32,6 +32,13 @@ public class TfConfigStrategyTrade extends BaseEntity
     @Excel(name = "持仓天数")
     private Long holdDays;
 
+
+    /**
+     * 分散投入的股票数量 N
+     * 即资金的分散粒度
+     */
+    private Integer diversification;
+
     /** 止损方法:1固定幅度，2动态幅度 */
     @Excel(name = "止损方法:1固定幅度，2动态幅度")
     private Integer stopLossMethod;
@@ -92,6 +99,16 @@ public class TfConfigStrategyTrade extends BaseEntity
         return holdDays;
     }
 
+    public void setDiversification(Integer diversification)
+    {
+        this.diversification = diversification;
+    }
+
+    public Integer getDiversification()
+    {
+        return diversification;
+    }
+
     public void setStopLossMethod(Integer stopLossMethod)
     {
         this.stopLossMethod = stopLossMethod;
@@ -149,6 +166,7 @@ public class TfConfigStrategyTrade extends BaseEntity
             .append("configName", getConfigName())
             .append("t1HighOpenRatio", getT1HighOpenRatio())
             .append("holdDays", getHoldDays())
+            .append("diversification", getDiversification())
             .append("stopLossMethod", getStopLossMethod())
             .append("stopLossRatio", getStopLossRatio())
             .append("stopProfitMethod", getStopProfitMethod())

@@ -9,6 +9,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="configName"    column="config_name"    />
         <result property="t1HighOpenRatio"    column="t1_high_open_ratio"    />
         <result property="holdDays"    column="hold_days"    />
+        <result property="diversification" column="diversification" />
         <result property="stopLossMethod" column="stop_loss_method"    />
         <result property="stopLossRatio"    column="stop_loss_ratio"    />
         <result property="stopProfitMethod"    column="stop_profit_method"    />
@@ -18,7 +19,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTfConfigStrategyTradeVo">
-        select id, config_name, t1_high_open_ratio, hold_days, stop_loss_method, stop_loss_ratio, stop_profit_method, stop_profit_ratio, create_time, update_time from tf_config_strategy_trade
+        select id, config_name, t1_high_open_ratio, hold_days, diversification, stop_loss_method, stop_loss_ratio, stop_profit_method, stop_profit_ratio, create_time, update_time from tf_config_strategy_trade
     </sql>
 
     <select id="selectTfConfigStrategyTradeList" parameterType="TfConfigStrategyTrade" resultMap="TfConfigStrategyTradeResult">
@@ -27,6 +28,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="configName != null "> and config_name = #{configName}</if>
             <if test="t1HighOpenRatio != null "> and t1_high_open_ratio = #{t1HighOpenRatio}</if>
             <if test="holdDays != null "> and hold_days = #{holdDays}</if>
+            <if test="diversification != null "> and diversification = #{diversification}</if>
             <if test="stopLossMethod != null "> and stop_loss_method = #{stopLossMethod}</if>
             <if test="stopLossRatio != null "> and stop_loss_ratio = #{stopLossRatio}</if>
             <if test="stopProfitMethod != null "> and stop_profit_method = #{stopProfitMethod}</if>
@@ -45,6 +47,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="configName != null">config_name,</if>
             <if test="t1HighOpenRatio != null">t1_high_open_ratio,</if>
             <if test="holdDays != null">hold_days,</if>
+            <if test="diversification != null">diversification,</if>
             <if test="stopLossMethod != null">stop_loss_method,</if>
             <if test="stopLossRatio != null">stop_loss_ratio,</if>
             <if test="stopProfitMethod != null">stop_profit_method,</if>
@@ -56,6 +59,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="configName != null">#{configName},</if>
             <if test="t1HighOpenRatio != null">#{t1HighOpenRatio},</if>
             <if test="holdDays != null">#{holdDays},</if>
+            <if test="diversification != null">#{diversification},</if>
             <if test="stopLossMethod != null">#{stopLossMethod},</if>
             <if test="stopLossRatio != null">#{stopLossRatio},</if>
             <if test="stopProfitMethod != null">#{stopProfitMethod},</if>
@@ -71,6 +75,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="configName != null">config_name = #{configName},</if>
             <if test="t1HighOpenRatio != null">t1_high_open_ratio = #{t1HighOpenRatio},</if>
             <if test="holdDays != null">hold_days = #{holdDays},</if>
+            <if test="diversification != null">diversification = #{diversification},</if>
             <if test="stopLossMethod != null">stop_loss_method = #{stopLossMethod},</if>
             <if test="stopLossRatio != null">stop_loss_ratio = #{stopLossRatio},</if>
             <if test="stopProfitMethod != null">stop_profit_method = #{stopProfitMethod},</if>
