@@ -177,6 +177,7 @@ public class TaCalServiceImpl implements ITaCalService
         TaCal query = new TaCal();
         query.setEndDate(currentDate);
         Date beginDate = DateUtils.getDateFromDistance(currentDate, -30);
+        query.setBeginDate(beginDate);
         List<TaCal> calList = taCalMapper.selectTaCalList(query);
         if(calList == null || calList.isEmpty()) {
             return null;

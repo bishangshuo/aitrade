@@ -72,13 +72,17 @@
         <result property="patternScore" column="pattern_score" />
         <result property="totalScore" column="total_score" />
         <result property="createdAt" column="created_at" />
+        <result property="status" column="status" />
+        <result property="targetPrice" column="target_price" />
+        <result property="stopLossPrice" column="stop_loss_price" />
     </resultMap>
     <sql id="selectStockPickDiagnostic">
         select id, backtest_id, symbol, stock_name, trade_date, strategy_code, strategy_name, passed, fail_reason,
         match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
         vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
         kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
-        volume_score, chip_score, momentum_score, pattern_score, total_score, created_at
+        volume_score, chip_score, momentum_score, pattern_score, total_score, created_at,
+        status, target_price, stop_loss_price
     </sql>
 
     <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
@@ -87,7 +91,8 @@
         match_vcp, match_ma_coil, match_air_refuel, close_price, change_rate,
         vol_ratio, vcp_amplitude, macd_dif, macd_dea, macd_hist,
         kdj_k, kdj_d, rsi14, obv, profit_ratio, is_chip_single_peak,
-        volume_score, chip_score, momentum_score, pattern_score, total_score
+        volume_score, chip_score, momentum_score, pattern_score, total_score,
+        status, target_price, stop_loss_price,
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
@@ -95,10 +100,19 @@
             #{item.matchVcp}, #{item.matchMaCoil}, #{item.matchAirRefuel}, #{item.closePrice}, #{item.changeRate},
             #{item.volRatio}, #{item.vcpAmplitude}, #{item.macdDif}, #{item.macdDea}, #{item.macdHist},
             #{item.kdjK}, #{item.kdjD}, #{item.rsi14}, #{item.obv}, #{item.profitRatio}, #{item.isChipSinglePeak},
-            #{item.volumeScore}, #{item.chipScore}, #{item.momentumScore}, #{item.patternScore}, #{item.totalScore}
+            #{item.volumeScore}, #{item.chipScore}, #{item.momentumScore}, #{item.patternScore}, #{item.totalScore},
+            #{item.status}, #{item.targetPrice}, #{item.stopLossPrice}
             )
         </foreach>
     </insert>
+    <update id="updateStatusByIds">
+        update ta_stock_pick_diagnostic
+        set status = #{status}
+        where id in
+        <foreach item="id" collection="ids" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </update>
     <select id="selectTopScore" parameterType="StockPickDiagnostic" resultMap="StockPickDiagnosticResult">
         <include refid="selectStockPickDiagnostic"/>
         <where>
@@ -109,6 +123,7 @@
             <if test="et.strategyCode != null"> and strategy_code = #{et.strategyCode} </if>
             <if test="et.strategyName != null and et.strategyName != ''"> and strategy_name like CONCAT('%', #{et.strategyName}, '%') </if>
             <if test="et.passed != null"> and passed = #{et.passed} </if>
+            <if test="et.status != null"> and status = #{et.status} </if>
         </where>
         ORDER BY total_score DESC
         LIMIT #{limit}

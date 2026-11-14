@@ -30,7 +30,6 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoField;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -490,7 +489,7 @@ public class BackTestServiceImpl implements IBackTestService {
         TfTradeExecution execution = new TfTradeExecution();
         execution.setAccountNo(accountNo);
         execution.setBacktestId(backtestRecord.getId());
-        execution.setOrderId(orderId);
+        //execution.setOrderId(orderId);
         execution.setSymbol(stockPickDiagnostic.getSymbol());
         execution.setStockName(stockPickDiagnostic.getStockName());
         execution.setTradeSide(TradeType.BUY.getValue());
@@ -569,7 +568,7 @@ public class BackTestServiceImpl implements IBackTestService {
             if(klineTradeDate.isAfter(t2Date)) {
                 BigDecimal open = kline.getOpen();
                 //策略算出的目标止盈价和止损价
-                BigDecimal targetPrice = stockPickDiagnostic.getTargetPrice5d();
+                BigDecimal targetPrice = stockPickDiagnostic.getTargetPrice();
                 BigDecimal lossPrice = stockPickDiagnostic.getStopLossPrice();
                 //保守模式下，止盈价为targetPrice*0.8，止损价为targetPrice*1.1
                 targetPrice = targetPrice.multiply(BigDecimal.valueOf(0.8));
@@ -641,7 +640,7 @@ public class BackTestServiceImpl implements IBackTestService {
         sellExecution.setBacktestId(backtestRecord.getId());
 
         //方便查询，买卖同一个订单编号
-        sellExecution.setOrderId(buyExecution.getOrderId());
+        //sellExecution.setOrderId(buyExecution.getOrderId());
         sellExecution.setSymbol(buyExecution.getSymbol());
         sellExecution.setStockName(buyExecution.getStockName());
         sellExecution.setTradeSide(TradeType.SELL.getValue());

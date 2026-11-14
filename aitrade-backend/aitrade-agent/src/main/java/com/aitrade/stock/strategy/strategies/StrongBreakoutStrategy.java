@@ -572,7 +572,7 @@ public class StrongBreakoutStrategy implements StockPickerStrategy {
         }
 
         // 3. 將計算結果寫入 Diagnostics 實體（需確保 StockPickDiagnostic 包含對應 setter/builder）
-        builder.targetPrice5d(targetPrice.setScale(2, RoundingMode.HALF_UP))
+        builder.targetPrice(targetPrice.setScale(2, RoundingMode.HALF_UP))
                 .stopLossPrice(stopLossPrice.setScale(2, RoundingMode.HALF_UP));
     }
 

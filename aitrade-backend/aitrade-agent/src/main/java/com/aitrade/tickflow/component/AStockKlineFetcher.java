@@ -128,11 +128,11 @@ public class AStockKlineFetcher {
     }
 
     public List<TfKline> getKlineSingle(TfStock stock, LocalDate fromDate, Integer days, String period) {
-        //开始时间：毫秒时间戳
+        //开始时间：毫秒时间戳凌晨0点0分0秒
         long startTime = fromDate.atStartOfDay(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli();
-        //结束时间：毫秒时间戳
+        //结束时间：毫秒时间戳凌晨0点0分0秒
         long endTime = fromDate.plusDays(days).atStartOfDay(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli();

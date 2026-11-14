@@ -52,6 +52,14 @@ public class TfPosition extends BaseEntity
     @Excel(name = "當前最新價/收盤價")
     private BigDecimal currentPrice;
 
+    /** 預測未來 N 天目標止盈價 */
+    @Excel(name = "預測未來 N 天目標止盈價")
+    private BigDecimal targetPrice; // 預測未來 N 天目標止盈價
+
+    /** 建議動態止損價 */
+    @Excel(name = "建議動態止損價")
+    private BigDecimal stopLossPrice;  // 建議動態止損價
+
     /** 當前持倉市值（total_volume * current_price） */
     @Excel(name = "當前持倉市值", readConverterExp = "t=otal_volume,*=,c=urrent_price")
     private BigDecimal marketValue;
@@ -69,6 +77,15 @@ public class TfPosition extends BaseEntity
     @Excel(name = "建倉日期", width = 30, dateFormat = "yyyy-MM-dd")
     private Date openDate;
 
+    /**
+     * 查询建仓日期用的参数
+     * @return
+     */
+    /** 起始日期 */
+    private Date startDate;
+    /** 截止日期 */
+    private Date endDate;
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -80,12 +97,16 @@ public class TfPosition extends BaseEntity
             .append("availableVolume", getAvailableVolume())
             .append("costPrice", getCostPrice())
             .append("currentPrice", getCurrentPrice())
+            .append("targetPrice", getTargetPrice())
+            .append("stopLossPrice", getStopLossPrice())
             .append("marketValue", getMarketValue())
             .append("unrealizedPnl", getUnrealizedPnl())
             .append("unrealizedPnlPct", getUnrealizedPnlPct())
             .append("openDate", getOpenDate())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
+            .append("startDate", getStartDate())
+            .append("endDate", getEndDate())
             .toString();
     }
 }

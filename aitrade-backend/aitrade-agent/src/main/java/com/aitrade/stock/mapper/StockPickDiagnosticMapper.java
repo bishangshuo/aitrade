@@ -13,4 +13,6 @@ public interface StockPickDiagnosticMapper {
     int insertBatch(@Param("list") List<StockPickDiagnostic> list);
 
     List<StockPickDiagnostic> selectTopScore(@Param("et") StockPickDiagnostic et, @Param("limit") int limit);
+
+    int updateStatusByIds(@Param("ids") Long[] ids, @Param("status") int status);
 }

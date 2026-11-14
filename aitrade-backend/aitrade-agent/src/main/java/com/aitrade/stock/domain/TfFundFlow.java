@@ -28,6 +28,10 @@ public class TfFundFlow extends BaseEntity
     @Excel(name = "賬戶編號")
     private String accountNo;
 
+    /** 關聯的回測編號 */
+    @Excel(name = "關聯的回測編號")
+    private Long backtestId;
+
     /** 業務發生日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     @Excel(name = "業務發生日期", width = 30, dateFormat = "yyyy-MM-dd")

@@ -32,9 +32,9 @@ public class TfTradeExecution extends BaseEntity
     @Excel(name = "回測編號")
     private Long backtestId;
 
-    /** 訂單編號 */
-    @Excel(name = "訂單編號")
-    private String orderId;
+    /** 持仓ID */
+    @Excel(name = "持仓ID")
+    private Long positionId;
 
     /** 股票代碼 */
     @Excel(name = "股票代碼")
@@ -88,7 +88,7 @@ public class TfTradeExecution extends BaseEntity
             .append("id", getId())
             .append("accountNo", getAccountNo())
             .append("backtestId", getBacktestId())
-            .append("orderId", getOrderId())
+            .append("positionId", getPositionId())
             .append("symbol", getSymbol())
             .append("stockName", getStockName())
             .append("tradeSide", getTradeSide())

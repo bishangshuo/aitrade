@@ -53,6 +53,14 @@ public class TfPositionDaily extends BaseEntity
     @Excel(name = "当前最新价/收盘价")
     private BigDecimal currentPrice;
 
+    /** 預測未來 N 天目標止盈價 */
+    @Excel(name = "預測未來 N 天目標止盈價")
+    private BigDecimal targetPrice; // 預測未來 N 天目標止盈價
+
+    /** 建議動態止損價 */
+    @Excel(name = "建議動態止損價")
+    private BigDecimal stopLossPrice;  // 建議動態止損價
+
     /** 当前持仓市值（total_volume * current_price） */
     @Excel(name = "当前持仓市值", readConverterExp = "t=otal_volume,*=,c=urrent_price")
     private BigDecimal marketValue;
@@ -160,6 +168,26 @@ public class TfPositionDaily extends BaseEntity
         return currentPrice;
     }
 
+    public void setTargetPrice(BigDecimal targetPrice)
+    {
+        this.targetPrice = targetPrice;
+    }
+
+    public BigDecimal getTargetPrice()
+    {
+        return targetPrice;
+    }
+
+    public void setStopLossPrice(BigDecimal stopLossPrice)
+    {
+        this.stopLossPrice = stopLossPrice;
+    }
+
+    public BigDecimal getStopLossPrice()
+    {
+        return stopLossPrice;
+    }
+
     public void setMarketValue(BigDecimal marketValue) 
     {
         this.marketValue = marketValue;
@@ -204,6 +232,7 @@ public class TfPositionDaily extends BaseEntity
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
+                .append("backtestId", getBacktestId())
             .append("accountNo", getAccountNo())
             .append("symbol", getSymbol())
             .append("stockName", getStockName())
@@ -211,6 +240,8 @@ public class TfPositionDaily extends BaseEntity
             .append("availableVolume", getAvailableVolume())
             .append("costPrice", getCostPrice())
             .append("currentPrice", getCurrentPrice())
+            .append("targetPrice", getTargetPrice())
+            .append("stopLossPrice", getStopLossPrice())
             .append("marketValue", getMarketValue())
             .append("unrealizedPnl", getUnrealizedPnl())
             .append("unrealizedPnlPct", getUnrealizedPnlPct())

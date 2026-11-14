@@ -13,6 +13,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="availableVolume"    column="available_volume"    />
         <result property="costPrice"    column="cost_price"    />
         <result property="currentPrice"    column="current_price"    />
+        <result property="targetPrice"    column="target_price"    />
+        <result property="stopLossPrice"    column="stop_loss_price"    />
         <result property="marketValue"    column="market_value"    />
         <result property="unrealizedPnl"    column="unrealized_pnl"    />
         <result property="unrealizedPnlPct"    column="unrealized_pnl_pct"    />
@@ -22,7 +24,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTfPositionVo">
-        select id, account_no, symbol, stock_name, total_volume, available_volume, cost_price, current_price, market_value, unrealized_pnl, unrealized_pnl_pct, open_date, create_time, update_time from tf_position
+        select id, account_no, symbol, stock_name, total_volume, available_volume, cost_price, current_price, target_price, stop_loss_price, market_value, unrealized_pnl, unrealized_pnl_pct, open_date, create_time, update_time from tf_position
     </sql>
 
     <select id="selectTfPositionList" parameterType="TfPosition" resultMap="TfPositionResult">
@@ -35,10 +37,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="availableVolume != null "> and available_volume = #{availableVolume}</if>
             <if test="costPrice != null "> and cost_price = #{costPrice}</if>
             <if test="currentPrice != null "> and current_price = #{currentPrice}</if>
+            <if test="targetPrice != null "> and target_price = #{targetPrice}</if>
+            <if test="stopLossPrice != null "> and stop_loss_price = #{stopLossPrice}</if>
             <if test="marketValue != null "> and market_value = #{marketValue}</if>
             <if test="unrealizedPnl != null "> and unrealized_pnl = #{unrealizedPnl}</if>
             <if test="unrealizedPnlPct != null "> and unrealized_pnl_pct = #{unrealizedPnlPct}</if>
             <if test="openDate != null "> and open_date = #{openDate}</if>
+            <if test="startDate != null and endDate != null"> and DATE(open_date) between DATE(#{startDate}) and DATE(#{endDate})</if>
+            <if test="startDate != null and endDate == null"> and DATE(open_date) &gt;= DATE(#{startDate})</if>
+            <if test="startDate == null and endDate != null"> and DATE(open_date) &lt;= DATE(#{endDate})</if>
         </where>
     </select>
     
@@ -57,6 +64,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="availableVolume != null">available_volume,</if>
             <if test="costPrice != null">cost_price,</if>
             <if test="currentPrice != null">current_price,</if>
+            <if test="targetPrice != null">target_price,</if>
+            <if test="stopLossPrice != null">stop_loss_price,</if>
             <if test="marketValue != null">market_value,</if>
             <if test="unrealizedPnl != null">unrealized_pnl,</if>
             <if test="unrealizedPnlPct != null">unrealized_pnl_pct,</if>
@@ -72,6 +81,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="availableVolume != null">#{availableVolume},</if>
             <if test="costPrice != null">#{costPrice},</if>
             <if test="currentPrice != null">#{currentPrice},</if>
+            <if test="targetPrice != null">#{targetPrice},</if>
+            <if test="stopLossPrice != null">#{stopLossPrice},</if>
             <if test="marketValue != null">#{marketValue},</if>
             <if test="unrealizedPnl != null">#{unrealizedPnl},</if>
             <if test="unrealizedPnlPct != null">#{unrealizedPnlPct},</if>
@@ -91,6 +102,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="availableVolume != null">available_volume = #{availableVolume},</if>
             <if test="costPrice != null">cost_price = #{costPrice},</if>
             <if test="currentPrice != null">current_price = #{currentPrice},</if>
+            <if test="targetPrice != null">target_price = #{targetPrice},</if>
+            <if test="stopLossPrice != null">stop_loss_price = #{stopLossPrice},</if>
             <if test="marketValue != null">market_value = #{marketValue},</if>
             <if test="unrealizedPnl != null">unrealized_pnl = #{unrealizedPnl},</if>
             <if test="unrealizedPnlPct != null">unrealized_pnl_pct = #{unrealizedPnlPct},</if>

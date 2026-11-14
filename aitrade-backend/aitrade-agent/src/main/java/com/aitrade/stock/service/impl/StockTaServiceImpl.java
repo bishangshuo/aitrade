@@ -165,7 +165,7 @@ public class StockTaServiceImpl implements IStockTaService {
         if(diagnostic.getPassed().equals(1)) {
             log.info("股票 {}:{} 通过筛选", stock.getSymbol(), stock.getName());
         }
-
+        diagnostic.setStatus(0);
         diagnosticMapper.insertBatch(List.of(diagnostic));
 
         dayTaResultListener.stockSelectResult(stock, diagnostic);
